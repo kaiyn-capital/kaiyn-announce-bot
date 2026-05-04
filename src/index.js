@@ -8,6 +8,7 @@ const {
   MessageFlags
 } = require('discord.js');
 const announceCommand = require('./commands/announce');
+const setupVerifyCommand = require('./commands/setup-verify');
 
 const requiredEnv = ['DISCORD_TOKEN'];
 
@@ -24,6 +25,7 @@ const client = new Client({
 
 client.commands = new Collection();
 client.commands.set(announceCommand.data.name, announceCommand);
+client.commands.set(setupVerifyCommand.data.name, setupVerifyCommand);
 
 client.once(Events.ClientReady, (readyClient) => {
   console.log(`Logged in as ${readyClient.user.tag}`);
@@ -32,7 +34,25 @@ client.once(Events.ClientReady, (readyClient) => {
 client.on(Events.InteractionCreate, async (interaction) => {
   try {
     if (interaction.isModalSubmit()) {
-      await announceCommand.handleModalSubmit(interaction);
+      const isAnnounceModal = await announceCommand.handleModalSubmit(interaction);
+
+      if (isAnnounceModal) {
+        return;
+      }
+
+      const isSetupVerifyModal = await setupVerifyCommand.handleModalSubmit(
+        interaction
+      );
+
+      if (isSetupVerifyModal) {
+        return;
+      }
+
+      return;
+    }
+
+    if (interaction.isButton()) {
+      await setupVerifyCommand.handleVerifyButton(interaction);
       return;
     }
 
@@ -44,7 +64,11 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
     await command.execute(interaction);
   } catch (error) {
-    console.error(`Error handling /${interaction.commandName}:`, error);
+    const interactionName = interaction.isChatInputCommand()
+      ? `/${interaction.commandName}`
+      : interaction.customId || interaction.type;
+
+    console.error(`Error handling ${interactionName}:`, error);
 
     const payload = {
       content: '執行指令時發生錯誤，請稍後再試。',

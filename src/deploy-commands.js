@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const { REST, Routes } = require('discord.js');
 const announceCommand = require('./commands/announce');
+const setupVerifyCommand = require('./commands/setup-verify');
 
 const requiredEnv = ['DISCORD_TOKEN', 'CLIENT_ID', 'GUILD_ID'];
 
@@ -12,7 +13,7 @@ for (const key of requiredEnv) {
   }
 }
 
-const commands = [announceCommand.data.toJSON()];
+const commands = [announceCommand.data.toJSON(), setupVerifyCommand.data.toJSON()];
 
 const rest = new REST({
   version: '10'

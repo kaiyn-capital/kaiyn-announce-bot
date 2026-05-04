@@ -1,13 +1,16 @@
 # Kaiyn Announce Bot
 
-最小可用的 Discord 彩色 Embed 公告機器人。
+最小可用的 Discord 彩色 Embed 公告與中文驗證機器人。
 
 ## 功能
 
 - Slash command：`/announce`
+- Slash command：`/setup-verify`
 - 管理員可透過 Modal 多行輸入框發送彩色 Embed 公告
+- 管理員可發送中文驗證面板，讓新成員點擊按鈕取得 Verified 身分組
 - 支援標題、內容、顏色、footer、大圖、縮圖、時間戳
 - 不使用資料庫
+- 不需要 CAPTCHA、防小號、反 VPN、付款或會員系統
 - 不需要 Docker
 - 可部署到 VPS / Railway / Render
 
@@ -16,6 +19,7 @@
 ```txt
 kaiyn-announce-bot/
 ├── package.json
+├── package-lock.json
 ├── .env.example
 ├── .gitignore
 ├── README.md
@@ -23,7 +27,8 @@ kaiyn-announce-bot/
     ├── index.js
     ├── deploy-commands.js
     ├── commands/
-    │   └── announce.js
+    │   ├── announce.js
+    │   └── setup-verify.js
     └── utils/
         └── color.js
 ```
@@ -63,15 +68,18 @@ kaiyn-announce-bot/
 - `View Channels`
 - `Send Messages`
 - `Embed Links`
+- `Manage Roles`
 - `Use Slash Commands`
 
 Invite URL 範例：
 
 ```txt
-https://discord.com/oauth2/authorize?client_id=YOUR_CLIENT_ID&permissions=2147503104&scope=bot+applications.commands
+https://discord.com/oauth2/authorize?client_id=YOUR_CLIENT_ID&permissions=2415938560&scope=bot+applications.commands
 ```
 
 請把 `YOUR_CLIENT_ID` 換成你的 Client ID。
+
+驗證功能需要 Bot 的最高身分組高於要發放的 Verified 身分組。請在 Discord 伺服器設定的 `Roles` 頁面，把 Bot 身分組拖到 Verified 身分組上方。
 
 ## 安裝
 
@@ -113,7 +121,7 @@ npm start
 npm run dev
 ```
 
-## Slash Command 使用範例
+## `/announce` 使用範例
 
 ```txt
 /announce channel:#announcements title:"Kaiyn Capital｜重要公告" color:"#2F80ED"
@@ -135,6 +143,48 @@ Binance：https://kaiyn.org/binance 邀请码：148898758
 
 色碼也可以省略 `#`，例如 `2F80ED`。
 
+## `/setup-verify` 使用範例
+
+```txt
+/setup-verify channel:#verify role:@Verified
+```
+
+完整自訂範例：
+
+```txt
+/setup-verify channel:#verify role:@Verified title:"Kaiyn Capital｜社群驗證" color:"#2F80ED" image:"https://example.com/verify.png" button_label:"✅ 完成驗證"
+```
+
+送出 `/setup-verify` 後，Bot 會跳出 Modal 多行輸入框。請把驗證面板內容貼到 `驗證面板內容` 欄位中，可以保留換行與空行。
+
+參數：
+
+- `channel`：要發送驗證面板的文字頻道，必填。
+- `role`：驗證成功後要給予的身分組，必填。
+- `title`：驗證面板標題，選填，預設 `Kaiyn Capital｜社群驗證`。
+- `color`：Embed 顏色，選填，預設 `#2F80ED`。支援 `#2F80ED` 或 `2F80ED`。
+- `image`：驗證面板大圖 URL，選填。
+- `button_label`：按鈕文字，選填，預設 `✅ 完成驗證`。
+
+權限規則：
+
+- 只有 `Administrator` 或 `Manage Guild` 權限的成員可以使用 `/setup-verify`。
+- 沒有權限時會收到 ephemeral message：`你沒有權限使用此指令。`
+- Bot 需要 `Manage Roles`、`Send Messages`、`Embed Links`。
+- Bot 在目標頻道也需要 `View Channels`。
+- Bot 的最高身分組必須高於要發放的 Verified 身分組。
+
+驗證流程：
+
+1. 管理員執行 `/setup-verify`。
+2. Bot 跳出 Modal 多行輸入框。
+3. 管理員輸入驗證面板內容並送出。
+4. Bot 在指定頻道發送中文 Embed 驗證面板。
+5. 新成員點擊綠色驗證按鈕。
+6. 如果已經有該身分組，Bot 回覆 ephemeral：`你已經完成驗證。`
+7. 如果尚未驗證，Bot 發放身分組並回覆 ephemeral：`✅ 驗證成功，你現在可以查看社群頻道。`
+8. 如果發放失敗，Bot 回覆 ephemeral：`驗證失敗，請聯絡管理員。`
+
 ## 測試方式
 
 1. 邀請 Bot 到測試伺服器。
@@ -142,39 +192,55 @@ Binance：https://kaiyn.org/binance 邀请码：148898758
    - View Channels
    - Send Messages
    - Embed Links
+   - Manage Roles
    - Use Slash Commands
-3. 執行：
+3. 確認 Bot 的最高身分組高於 Verified 身分組。
+4. 執行：
 
 ```bash
 npm run deploy
 npm start
 ```
 
-4. 在 Discord 輸入 `/announce`。
-5. 選擇公告頻道，填入 title、color 等短參數。
-6. 送出後，在 Modal 多行輸入框貼上公告內容。
-7. 按下 Modal 的送出按鈕。
-8. 成功後應收到 ephemeral 回覆：
+5. 在 Discord 輸入 `/announce`，確認公告功能仍可使用。
+6. 在 Discord 輸入 `/setup-verify channel:#verify role:@Verified`。
+7. 在 Modal 多行輸入框填入驗證面板內容並送出。
+8. 確認指定頻道出現中文 Embed 驗證面板與綠色按鈕。
+9. 用沒有 Verified 身分組的帳號點擊按鈕，應收到：
 
 ```txt
-公告已發送到 #channel
+✅ 驗證成功，你現在可以查看社群頻道。
 ```
 
-9. 若色碼錯誤，例如 `blue`，應收到：
+10. 再次點擊按鈕，應收到：
+
+```txt
+你已經完成驗證。
+```
+
+11. 若色碼錯誤，例如 `blue`，應收到：
 
 ```txt
 色碼格式錯誤，請使用 #RRGGBB，例如 #2F80ED。
 ```
 
-10. 若使用者沒有 `Manage Messages` 或 `Administrator` 權限，應收到：
+12. 若使用者沒有 `/announce` 權限，應收到：
 
 ```txt
 你沒有權限使用此指令。
 ```
 
+13. 若使用者沒有 `/setup-verify` 權限，應收到：
+
+```txt
+你沒有權限使用此指令。
+```
+
+14. 若 Bot 缺少頻道權限、`Manage Roles`，或 Bot 身分組排序低於 Verified 身分組，應收到清楚的錯誤原因。
+
 ## 更新 Slash Command
 
-如果你修改了 `/announce` 的參數，例如本專案從 `description` 參數改成 Modal 多行輸入框，請重新執行：
+如果你修改了 slash command 的參數，請重新執行：
 
 ```bash
 npm run deploy
@@ -184,6 +250,7 @@ npm run deploy
 
 - Node.js 版本需為 20+
 - 不要把 `.env` commit 到 GitHub
+- `.gitignore` 已忽略 `.env` 與 `node_modules/`
 - Railway / Render / VPS 上請用環境變數設定：
   - `DISCORD_TOKEN`
   - `CLIENT_ID`
