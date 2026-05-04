@@ -41,7 +41,7 @@ function hasSetupPermission(interaction) {
 
   return Boolean(
     permissions?.has(PermissionFlagsBits.Administrator) ||
-      permissions?.has(PermissionFlagsBits.ManageGuild)
+    permissions?.has(PermissionFlagsBits.ManageGuild)
   );
 }
 
@@ -433,7 +433,7 @@ module.exports = {
 
     try {
       if (!interaction.inGuild()) {
-        await replyEphemeral(interaction, '驗證失敗，請聯絡管理員。');
+        await replyEphemeral(interaction, '验证失败，请联络管理员。 Verification failed, please contact the administrator.');
         return true;
       }
 
@@ -442,7 +442,7 @@ module.exports = {
 
       if (!role) {
         console.error(`Verify role not found: ${roleId}`);
-        await replyEphemeral(interaction, '驗證失敗，請聯絡管理員。');
+        await replyEphemeral(interaction, '验证失败，请联络管理员。 Verification failed, please contact the administrator.');
         return true;
       }
 
@@ -455,21 +455,21 @@ module.exports = {
 
       if (roleValidationError) {
         console.error(`Verify role validation failed: ${roleValidationError}`);
-        await replyEphemeral(interaction, '驗證失敗，請聯絡管理員。');
+        await replyEphemeral(interaction, '验证失败，请联络管理员。 Verification failed, please contact the administrator.');
         return true;
       }
 
       const member = await getInteractionGuildMember(interaction);
 
       if (member.roles.cache.has(role.id)) {
-        await replyEphemeral(interaction, '你已經完成驗證。');
+        await replyEphemeral(interaction, '你已经完成验证。 You have already completed verification.');
         return true;
       }
 
       await member.roles.add(role);
       await replyEphemeral(
         interaction,
-        '✅ 驗證成功，你現在可以查看社群頻道。'
+        '✅ 验证成功，你现在可以查看社群频道。 Verification successful. You can now view the community channel.'
       );
 
       return true;
@@ -477,7 +477,7 @@ module.exports = {
       console.error('Failed to handle verify button:', error);
 
       try {
-        await replyEphemeral(interaction, '驗證失敗，請聯絡管理員。');
+        await replyEphemeral(interaction, '验证失败，请联络管理员。 Verification failed, please contact the administrator.');
       } catch (replyError) {
         console.error('Failed to send verify button error response:', replyError);
       }
