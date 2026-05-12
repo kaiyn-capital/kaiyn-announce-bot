@@ -167,7 +167,7 @@ const announceCommand: BotCommand = {
     .addStringOption((option) =>
       option
         .setName('color')
-        .setDescription('Embed 左側顏色，例如 #2F80ED')
+        .setDescription('Embed 左側顏色，例如 #87CEEB')
         .setRequired(false)
     )
     .addStringOption((option) =>
@@ -192,7 +192,7 @@ const announceCommand: BotCommand = {
     .addBooleanOption((option) =>
       option
         .setName('timestamp')
-        .setDescription('是否加上時間戳，預設 true')
+        .setDescription('是否加上時間戳，預設 false')
         .setRequired(false)
     ),
 
@@ -212,14 +212,14 @@ const announceCommand: BotCommand = {
       const footer = interaction.options.getString('footer');
       const image = interaction.options.getString('image');
       const thumbnail = interaction.options.getString('thumbnail');
-      const timestamp = interaction.options.getBoolean('timestamp') ?? true;
+      const timestamp = interaction.options.getBoolean('timestamp') ?? false;
 
       const parsedColor = parseHexColor(colorInput);
 
       if (parsedColor === null) {
         return replyEphemeral(
           interaction,
-          '色碼格式錯誤，請使用 #RRGGBB，例如 #2F80ED。'
+          '色碼格式錯誤，請使用 #RRGGBB，例如 #87CEEB。'
         );
       }
 

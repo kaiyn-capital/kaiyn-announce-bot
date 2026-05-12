@@ -163,7 +163,7 @@ docs/railway-deployment.md
 ## `/announce` 使用範例
 
 ```txt
-/announce channel:#announcements title:"Kaiyn Capital｜重要公告" color:"#2F80ED"
+/announce channel:#announcements title:"Kaiyn Capital｜重要公告" color:"#87CEEB"
 ```
 
 送出 `/announce` 後，Bot 會跳出 Modal 多行輸入框。請把公告內容貼到 `公告內容` 欄位中，可以保留換行與空行。
@@ -180,7 +180,9 @@ Bitget：https://kaiyn.org/bitget 邀请码：5nmb
 Binance：https://kaiyn.org/binance 邀请码：148898758
 ```
 
-色碼也可以省略 `#`，例如 `2F80ED`。
+`/announce` 的 `color` 選填，預設為 `#87CEEB`。色碼也可以省略 `#`，例如 `87CEEB`。
+
+`/announce` 的 `timestamp` 選填，預設為 `false`。
 
 ## `/setup-verify` 使用範例
 
@@ -191,7 +193,7 @@ Binance：https://kaiyn.org/binance 邀请码：148898758
 完整自訂範例：
 
 ```txt
-/setup-verify channel:#verify role:@Verified title:"Kaiyn Capital｜社群驗證" color:"#2F80ED" image:"https://example.com/verify.png" button_label:"✅ 完成驗證"
+/setup-verify channel:#verify role:@Verified title:"Kaiyn Capital｜社群驗證" color:"#87CEEB" image:"https://example.com/verify.png" button_label:"✅ 完成驗證"
 ```
 
 送出 `/setup-verify` 後，Bot 會跳出 Modal 多行輸入框。請把驗證面板內容貼到 `驗證面板內容` 欄位中，可以保留換行與空行。
@@ -201,7 +203,7 @@ Binance：https://kaiyn.org/binance 邀请码：148898758
 - `channel`：要發送驗證面板的文字頻道，必填。
 - `role`：驗證成功後要給予的身分組，必填。
 - `title`：驗證面板標題，選填，預設 `Kaiyn Capital｜社群驗證`。
-- `color`：Embed 顏色，選填，預設 `#2F80ED`。支援 `#2F80ED` 或 `2F80ED`。
+- `color`：Embed 顏色，選填，預設 `#87CEEB`。支援 `#87CEEB` 或 `87CEEB`。
 - `image`：驗證面板大圖 URL，選填。
 - `button_label`：按鈕文字，選填，預設 `✅ 完成驗證`。
 
@@ -260,7 +262,7 @@ npm start
 11. 若色碼錯誤，例如 `blue`，應收到：
 
 ```txt
-色碼格式錯誤，請使用 #RRGGBB，例如 #2F80ED。
+色碼格式錯誤，請使用 #RRGGBB，例如 #87CEEB。
 ```
 
 12. 若使用者沒有 `/announce` 權限，應收到：

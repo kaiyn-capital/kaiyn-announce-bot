@@ -4,8 +4,8 @@ import { DEFAULT_COLOR, parseHexColor } from './color';
 
 describe('parseHexColor', () => {
   it('accepts colors with or without #', () => {
-    assert.equal(parseHexColor('#2F80ED'), 0x2f80ed);
-    assert.equal(parseHexColor('2F80ED'), 0x2f80ed);
+    assert.equal(parseHexColor('#87CEEB'), 0x87ceeb);
+    assert.equal(parseHexColor('87CEEB'), 0x87ceeb);
   });
 
   it('rejects invalid hex colors', () => {

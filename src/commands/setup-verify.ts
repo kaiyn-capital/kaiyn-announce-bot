@@ -236,7 +236,7 @@ const setupVerifyCommand: BotCommand = {
     .addStringOption((option) =>
       option
         .setName('color')
-        .setDescription('Embed 顏色，例如 #2F80ED')
+        .setDescription('Embed 顏色，例如 #87CEEB')
         .setRequired(false)
     )
     .addStringOption((option) =>
@@ -283,7 +283,7 @@ const setupVerifyCommand: BotCommand = {
       if (parsedColor === null) {
         return replyEphemeral(
           interaction,
-          '色碼格式錯誤，請使用 #RRGGBB，例如 #2F80ED。'
+          '色碼格式錯誤，請使用 #RRGGBB，例如 #87CEEB。'
         );
       }
 
