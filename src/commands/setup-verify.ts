@@ -13,7 +13,15 @@ import {
   TextInputStyle
 } from 'discord.js';
 import { randomUUID } from 'node:crypto';
+import {
+  buildVerifyPanelPayload,
+  getRoleValidationError as getRoleValidationErrorFromData,
+  isPendingExpired,
+  type PendingVerifyPanel,
+  type VerifyPanelInput
+} from './setup-verify.logic';
 import { DEFAULT_COLOR, parseHexColor } from '../utils/color';
+import { getMissingTextChannelPermissions } from '../utils/permissions';
 import type {
   ButtonInteraction,
   ChatInputCommandInteraction,
@@ -36,27 +44,6 @@ interface SendableVerifyChannel {
   permissionsFor(member: GuildMember): Readonly<PermissionsBitField> | null;
   send(payload: VerifyPanelPayload): Promise<unknown>;
   toString(): string;
-}
-
-interface PendingVerifyPanel {
-  buttonLabel: string;
-  channelId: string;
-  expiresAt: number;
-  guildId: string | null;
-  image: string | null;
-  parsedColor: number;
-  roleId: string;
-  title: string;
-  userId: string;
-}
-
-interface VerifyPanelInput {
-  title: string;
-  description: string;
-  parsedColor: number;
-  roleId: string;
-  buttonLabel: string;
-  image: string | null;
 }
 
 interface VerifyPanelPayload {
@@ -114,21 +101,11 @@ function getMissingChannelPermissions(
     return null;
   }
 
-  const missingPermissions = [];
-
-  if (!botPermissions.has(PermissionFlagsBits.ViewChannel)) {
-    missingPermissions.push('View Channels');
-  }
-
-  if (!botPermissions.has(PermissionFlagsBits.SendMessages)) {
-    missingPermissions.push('Send Messages');
-  }
-
-  if (!botPermissions.has(PermissionFlagsBits.EmbedLinks)) {
-    missingPermissions.push('Embed Links');
-  }
-
-  return missingPermissions;
+  return getMissingTextChannelPermissions({
+    canEmbedLinks: botPermissions.has(PermissionFlagsBits.EmbedLinks),
+    canSendMessages: botPermissions.has(PermissionFlagsBits.SendMessages),
+    canViewChannel: botPermissions.has(PermissionFlagsBits.ViewChannel)
+  });
 }
 
 function isSendableVerifyChannel(channel: unknown): channel is SendableVerifyChannel {
@@ -151,23 +128,13 @@ function getRoleValidationError(
   botMember: GuildMember,
   role: Role
 ): string | null {
-  if (role.id === guild.id) {
-    return '不能將 @everyone 作為驗證身分組。';
-  }
-
-  if (role.managed) {
-    return '不能發放由 Discord 或整合服務管理的身分組。';
-  }
-
-  if (!botMember.permissions.has(PermissionFlagsBits.ManageRoles)) {
-    return '機器人缺少 Manage Roles 權限。';
-  }
-
-  if (botMember.roles.highest.comparePositionTo(role) <= 0) {
-    return '機器人的最高身分組必須高於要發放的 Verified 身分組。';
-  }
-
-  return null;
+  return getRoleValidationErrorFromData({
+    botCanManageRoles: botMember.permissions.has(PermissionFlagsBits.ManageRoles),
+    botHighestRoleCompareToRole: botMember.roles.highest.comparePositionTo(role),
+    guildId: guild.id,
+    roleId: role.id,
+    roleManaged: role.managed
+  });
 }
 
 function buildVerifyPanel({
@@ -178,19 +145,27 @@ function buildVerifyPanel({
   buttonLabel,
   image
 }: VerifyPanelInput): VerifyPanelPayload {
+  const payload = buildVerifyPanelPayload({
+    buttonLabel,
+    description,
+    image,
+    parsedColor,
+    roleId,
+    title
+  });
   const embed = new EmbedBuilder()
-    .setTitle(title)
-    .setDescription(description)
-    .setColor(parsedColor)
+    .setTitle(payload.title)
+    .setDescription(payload.description)
+    .setColor(payload.color)
     .setTimestamp();
 
-  if (image) {
-    embed.setImage(image);
+  if (payload.image) {
+    embed.setImage(payload.image);
   }
 
   const button = new ButtonBuilder()
-    .setCustomId(`${VERIFY_CUSTOM_ID_PREFIX}${roleId}`)
-    .setLabel(buttonLabel)
+    .setCustomId(`${VERIFY_CUSTOM_ID_PREFIX}${payload.roleId}`)
+    .setLabel(payload.buttonLabel)
     .setStyle(ButtonStyle.Success);
 
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(button);
@@ -205,7 +180,7 @@ function cleanupExpiredVerifyPanels() {
   const now = Date.now();
 
   for (const [id, panel] of pendingVerifyPanels.entries()) {
-    if (panel.expiresAt <= now) {
+    if (isPendingExpired(panel.expiresAt, now)) {
       pendingVerifyPanels.delete(id);
     }
   }
@@ -419,7 +394,7 @@ const setupVerifyCommand: BotCommand = {
       const modalId = interaction.customId.slice(SETUP_VERIFY_MODAL_PREFIX.length);
       const pendingPanel = pendingVerifyPanels.get(modalId);
 
-      if (!pendingPanel || pendingPanel.expiresAt <= Date.now()) {
+      if (!pendingPanel || isPendingExpired(pendingPanel.expiresAt, Date.now())) {
         pendingVerifyPanels.delete(modalId);
         await replyEphemeral(
           interaction,

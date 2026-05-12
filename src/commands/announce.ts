@@ -10,7 +10,13 @@ import {
   TextInputStyle
 } from 'discord.js';
 import { randomUUID } from 'node:crypto';
+import {
+  buildAnnouncementEmbedPayload,
+  isPendingExpired,
+  type PendingAnnouncement
+} from './announce.logic';
 import { DEFAULT_COLOR, parseHexColor } from '../utils/color';
+import { getMissingTextChannelPermissions } from '../utils/permissions';
 import type {
   ChatInputCommandInteraction,
   GuildMember,
@@ -28,19 +34,6 @@ interface SendableAnnouncementChannel {
   permissionsFor(member: GuildMember): Readonly<PermissionsBitField> | null;
   send(payload: { embeds: EmbedBuilder[] }): Promise<unknown>;
   toString(): string;
-}
-
-interface PendingAnnouncement {
-  channelId: string;
-  expiresAt: number;
-  footer: string | null;
-  guildId: string | null;
-  image: string | null;
-  parsedColor: number;
-  thumbnail: string | null;
-  timestamp: boolean;
-  title: string;
-  userId: string;
 }
 
 const ANNOUNCE_MODAL_PREFIX = 'announce:';
@@ -76,7 +69,7 @@ function cleanupExpiredAnnouncements() {
   const now = Date.now();
 
   for (const [id, announcement] of pendingAnnouncements.entries()) {
-    if (announcement.expiresAt <= now) {
+    if (isPendingExpired(announcement.expiresAt, now)) {
       pendingAnnouncements.delete(id);
     }
   }
@@ -115,45 +108,36 @@ async function getMissingBotPermissions(
     return null;
   }
 
-  const missingPermissions = [];
-
-  if (!botPermissions.has(PermissionFlagsBits.ViewChannel)) {
-    missingPermissions.push('View Channels');
-  }
-
-  if (!botPermissions.has(PermissionFlagsBits.SendMessages)) {
-    missingPermissions.push('Send Messages');
-  }
-
-  if (!botPermissions.has(PermissionFlagsBits.EmbedLinks)) {
-    missingPermissions.push('Embed Links');
-  }
-
-  return missingPermissions;
+  return getMissingTextChannelPermissions({
+    canEmbedLinks: botPermissions.has(PermissionFlagsBits.EmbedLinks),
+    canSendMessages: botPermissions.has(PermissionFlagsBits.SendMessages),
+    canViewChannel: botPermissions.has(PermissionFlagsBits.ViewChannel)
+  });
 }
 
 function buildAnnouncementEmbed(
   announcement: PendingAnnouncement,
   description: string
 ): EmbedBuilder {
+  const payload = buildAnnouncementEmbedPayload(announcement, description);
   const embed = new EmbedBuilder()
-    .setTitle(announcement.title)
-    .setDescription(description)
-    .setColor(announcement.parsedColor);
+    .setTitle(payload.title)
+    .setDescription(payload.description)
+    .setColor(payload.color);
 
-  if (announcement.footer) {
-    embed.setFooter({ text: announcement.footer });
+  if (payload.footer) {
+    embed.setFooter({ text: payload.footer });
   }
 
-  if (announcement.image) {
-    embed.setImage(announcement.image);
+  if (payload.image) {
+    embed.setImage(payload.image);
   }
 
-  if (announcement.thumbnail) {
-    embed.setThumbnail(announcement.thumbnail);
+  if (payload.thumbnail) {
+    embed.setThumbnail(payload.thumbnail);
   }
 
-  if (announcement.timestamp) {
+  if (payload.timestamp) {
     embed.setTimestamp();
   }
 
@@ -323,7 +307,7 @@ const announceCommand: BotCommand = {
       const modalId = interaction.customId.slice(ANNOUNCE_MODAL_PREFIX.length);
       const announcement = pendingAnnouncements.get(modalId);
 
-      if (!announcement || announcement.expiresAt <= Date.now()) {
+      if (!announcement || isPendingExpired(announcement.expiresAt, Date.now())) {
         pendingAnnouncements.delete(modalId);
         await replyEphemeral(interaction, '公告表單已過期，請重新使用 /announce。');
         return true;

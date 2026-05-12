@@ -147,6 +147,13 @@ npm run dev
 npm run typecheck
 ```
 
+執行單元測試前先編譯：
+
+```bash
+npm run build
+npm test
+```
+
 ## `/announce` 使用範例
 
 ```txt
