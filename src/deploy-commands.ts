@@ -1,8 +1,8 @@
-require('dotenv').config();
+import 'dotenv/config';
 
-const { REST, Routes } = require('discord.js');
-const announceCommand = require('./commands/announce');
-const setupVerifyCommand = require('./commands/setup-verify');
+import { REST, Routes } from 'discord.js';
+import announceCommand from './commands/announce';
+import setupVerifyCommand from './commands/setup-verify';
 
 const requiredEnv = ['DISCORD_TOKEN', 'CLIENT_ID', 'GUILD_ID'];
 
@@ -13,18 +13,33 @@ for (const key of requiredEnv) {
   }
 }
 
+function getRequiredEnv(key: string): string {
+  const value = process.env[key];
+
+  if (!value) {
+    console.error(`Missing environment variable: ${key}`);
+    process.exit(1);
+  }
+
+  return value;
+}
+
+const discordToken = getRequiredEnv('DISCORD_TOKEN');
+const clientId = getRequiredEnv('CLIENT_ID');
+const guildId = getRequiredEnv('GUILD_ID');
+
 const commands = [announceCommand.data.toJSON(), setupVerifyCommand.data.toJSON()];
 
 const rest = new REST({
   version: '10'
-}).setToken(process.env.DISCORD_TOKEN);
+}).setToken(discordToken);
 
 async function main() {
   try {
     console.log('Started refreshing guild slash commands.');
 
     await rest.put(
-      Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
+      Routes.applicationGuildCommands(clientId, guildId),
       {
         body: commands
       }

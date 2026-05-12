@@ -1,4 +1,4 @@
-const {
+import {
   ActionRowBuilder,
   ChannelType,
   EmbedBuilder,
@@ -8,16 +8,50 @@ const {
   SlashCommandBuilder,
   TextInputBuilder,
   TextInputStyle
-} = require('discord.js');
-const { randomUUID } = require('node:crypto');
-const { DEFAULT_COLOR, parseHexColor } = require('../utils/color');
+} from 'discord.js';
+import { randomUUID } from 'node:crypto';
+import { DEFAULT_COLOR, parseHexColor } from '../utils/color';
+import type {
+  ChatInputCommandInteraction,
+  GuildMember,
+  InteractionReplyOptions,
+  ModalSubmitInteraction,
+  PermissionsBitField
+} from 'discord.js';
+import type { BotCommand } from '../types/command';
+
+type AnnounceInteraction = ChatInputCommandInteraction | ModalSubmitInteraction;
+
+interface SendableAnnouncementChannel {
+  id: string;
+  isTextBased(): boolean;
+  permissionsFor(member: GuildMember): Readonly<PermissionsBitField> | null;
+  send(payload: { embeds: EmbedBuilder[] }): Promise<unknown>;
+  toString(): string;
+}
+
+interface PendingAnnouncement {
+  channelId: string;
+  expiresAt: number;
+  footer: string | null;
+  guildId: string | null;
+  image: string | null;
+  parsedColor: number;
+  thumbnail: string | null;
+  timestamp: boolean;
+  title: string;
+  userId: string;
+}
 
 const ANNOUNCE_MODAL_PREFIX = 'announce:';
 const PENDING_MODAL_TTL_MS = 15 * 60 * 1000;
-const pendingAnnouncements = new Map();
+const pendingAnnouncements = new Map<string, PendingAnnouncement>();
 
-async function replyEphemeral(interaction, content) {
-  const payload = {
+async function replyEphemeral(
+  interaction: AnnounceInteraction,
+  content: string
+): Promise<unknown> {
+  const payload: InteractionReplyOptions = {
     content,
     flags: MessageFlags.Ephemeral
   };
@@ -29,7 +63,7 @@ async function replyEphemeral(interaction, content) {
   return interaction.reply(payload);
 }
 
-function hasAnnouncePermission(interaction) {
+function hasAnnouncePermission(interaction: AnnounceInteraction): boolean {
   const permissions = interaction.memberPermissions;
 
   return Boolean(
@@ -48,7 +82,31 @@ function cleanupExpiredAnnouncements() {
   }
 }
 
-async function getMissingBotPermissions(interaction, channel) {
+function isSendableAnnouncementChannel(
+  channel: unknown
+): channel is SendableAnnouncementChannel {
+  if (!channel || typeof channel !== 'object') {
+    return false;
+  }
+
+  const candidate = channel as Partial<SendableAnnouncementChannel>;
+
+  return Boolean(
+    typeof candidate.isTextBased === 'function' &&
+      candidate.isTextBased() &&
+      typeof candidate.permissionsFor === 'function' &&
+      typeof candidate.send === 'function'
+  );
+}
+
+async function getMissingBotPermissions(
+  interaction: AnnounceInteraction,
+  channel: SendableAnnouncementChannel
+): Promise<string[] | null> {
+  if (!interaction.guild) {
+    return null;
+  }
+
   const botMember =
     interaction.guild.members.me || (await interaction.guild.members.fetchMe());
   const botPermissions = channel.permissionsFor(botMember);
@@ -74,7 +132,10 @@ async function getMissingBotPermissions(interaction, channel) {
   return missingPermissions;
 }
 
-function buildAnnouncementEmbed(announcement, description) {
+function buildAnnouncementEmbed(
+  announcement: PendingAnnouncement,
+  description: string
+): EmbedBuilder {
   const embed = new EmbedBuilder()
     .setTitle(announcement.title)
     .setDescription(description)
@@ -99,7 +160,7 @@ function buildAnnouncementEmbed(announcement, description) {
   return embed;
 }
 
-module.exports = {
+const announceCommand: BotCommand = {
   data: new SlashCommandBuilder()
     .setName('announce')
     .setDescription('開啟多行輸入框並發送彩色 Embed 公告訊息')
@@ -178,11 +239,15 @@ module.exports = {
         );
       }
 
-      if (!channel.isTextBased() || typeof channel.send !== 'function') {
+      if (!isSendableAnnouncementChannel(channel)) {
         return replyEphemeral(interaction, '請選擇可發送訊息的文字頻道。');
       }
 
-      const missingPermissions = await getMissingBotPermissions(interaction, channel);
+      const targetChannel = channel;
+      const missingPermissions = await getMissingBotPermissions(
+        interaction,
+        targetChannel
+      );
 
       if (!missingPermissions) {
         return replyEphemeral(interaction, '無法檢查機器人在目標頻道的權限。');
@@ -191,7 +256,7 @@ module.exports = {
       if (missingPermissions.length > 0) {
         return replyEphemeral(
           interaction,
-          `機器人在 ${channel} 缺少以下權限：${missingPermissions.join('、')}。`
+          `機器人在 ${targetChannel} 缺少以下權限：${missingPermissions.join('、')}。`
         );
       }
 
@@ -200,7 +265,7 @@ module.exports = {
       const modalId = randomUUID();
 
       pendingAnnouncements.set(modalId, {
-        channelId: channel.id,
+        channelId: targetChannel.id,
         expiresAt: Date.now() + PENDING_MODAL_TTL_MS,
         footer,
         guildId: interaction.guildId,
@@ -224,7 +289,9 @@ module.exports = {
         .setMaxLength(4000)
         .setRequired(true);
 
-      const row = new ActionRowBuilder().addComponents(descriptionInput);
+      const row = new ActionRowBuilder<TextInputBuilder>().addComponents(
+        descriptionInput
+      );
 
       modal.addComponents(row);
 
@@ -277,14 +344,25 @@ module.exports = {
         return true;
       }
 
-      const channel = await interaction.guild.channels.fetch(announcement.channelId);
+      const guild = interaction.guild;
 
-      if (!channel || !channel.isTextBased() || typeof channel.send !== 'function') {
+      if (!guild) {
+        await replyEphemeral(interaction, '此指令只能在伺服器中使用。');
+        return true;
+      }
+
+      const channel = await guild.channels.fetch(announcement.channelId);
+
+      if (!isSendableAnnouncementChannel(channel)) {
         await replyEphemeral(interaction, '找不到可發送訊息的目標文字頻道。');
         return true;
       }
 
-      const missingPermissions = await getMissingBotPermissions(interaction, channel);
+      const targetChannel = channel;
+      const missingPermissions = await getMissingBotPermissions(
+        interaction,
+        targetChannel
+      );
 
       if (!missingPermissions) {
         await replyEphemeral(interaction, '無法檢查機器人在目標頻道的權限。');
@@ -294,7 +372,7 @@ module.exports = {
       if (missingPermissions.length > 0) {
         await replyEphemeral(
           interaction,
-          `機器人在 ${channel} 缺少以下權限：${missingPermissions.join('、')}。`
+          `機器人在 ${targetChannel} 缺少以下權限：${missingPermissions.join('、')}。`
         );
         return true;
       }
@@ -308,11 +386,11 @@ module.exports = {
 
       const embed = buildAnnouncementEmbed(announcement, description);
 
-      await channel.send({
+      await targetChannel.send({
         embeds: [embed]
       });
 
-      await replyEphemeral(interaction, `公告已發送到 ${channel}`);
+      await replyEphemeral(interaction, `公告已發送到 ${targetChannel}`);
       return true;
     } catch (error) {
       console.error('Failed to submit announce modal:', error);
@@ -329,3 +407,5 @@ module.exports = {
     }
   }
 };
+
+export default announceCommand;

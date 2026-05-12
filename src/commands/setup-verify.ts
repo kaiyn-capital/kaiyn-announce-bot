@@ -1,18 +1,68 @@
-const {
+import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
   ChannelType,
   EmbedBuilder,
+  GuildMember,
   MessageFlags,
   ModalBuilder,
   PermissionFlagsBits,
   SlashCommandBuilder,
   TextInputBuilder,
   TextInputStyle
-} = require('discord.js');
-const { randomUUID } = require('node:crypto');
-const { DEFAULT_COLOR, parseHexColor } = require('../utils/color');
+} from 'discord.js';
+import { randomUUID } from 'node:crypto';
+import { DEFAULT_COLOR, parseHexColor } from '../utils/color';
+import type {
+  ButtonInteraction,
+  ChatInputCommandInteraction,
+  Guild,
+  InteractionReplyOptions,
+  ModalSubmitInteraction,
+  PermissionsBitField,
+  Role
+} from 'discord.js';
+import type { BotCommand } from '../types/command';
+
+type VerifyInteraction =
+  | ButtonInteraction
+  | ChatInputCommandInteraction
+  | ModalSubmitInteraction;
+
+interface SendableVerifyChannel {
+  id: string;
+  isTextBased(): boolean;
+  permissionsFor(member: GuildMember): Readonly<PermissionsBitField> | null;
+  send(payload: VerifyPanelPayload): Promise<unknown>;
+  toString(): string;
+}
+
+interface PendingVerifyPanel {
+  buttonLabel: string;
+  channelId: string;
+  expiresAt: number;
+  guildId: string | null;
+  image: string | null;
+  parsedColor: number;
+  roleId: string;
+  title: string;
+  userId: string;
+}
+
+interface VerifyPanelInput {
+  title: string;
+  description: string;
+  parsedColor: number;
+  roleId: string;
+  buttonLabel: string;
+  image: string | null;
+}
+
+interface VerifyPanelPayload {
+  components: ActionRowBuilder<ButtonBuilder>[];
+  embeds: EmbedBuilder[];
+}
 
 const SETUP_VERIFY_MODAL_PREFIX = 'setup-verify:';
 const VERIFY_CUSTOM_ID_PREFIX = 'verify:';
@@ -21,10 +71,13 @@ const DEFAULT_TITLE = 'Kaiyn Capital｜社群驗證';
 const DEFAULT_DESCRIPTION =
   '歡迎加入 Kaiyn Capital。請點擊下方按鈕完成驗證，驗證成功後即可查看社群頻道。';
 const DEFAULT_BUTTON_LABEL = '✅ 完成驗證';
-const pendingVerifyPanels = new Map();
+const pendingVerifyPanels = new Map<string, PendingVerifyPanel>();
 
-async function replyEphemeral(interaction, content) {
-  const payload = {
+async function replyEphemeral(
+  interaction: VerifyInteraction,
+  content: string
+): Promise<unknown> {
+  const payload: InteractionReplyOptions = {
     content,
     flags: MessageFlags.Ephemeral
   };
@@ -36,7 +89,9 @@ async function replyEphemeral(interaction, content) {
   return interaction.reply(payload);
 }
 
-function hasSetupPermission(interaction) {
+function hasSetupPermission(
+  interaction: ChatInputCommandInteraction | ModalSubmitInteraction
+): boolean {
   const permissions = interaction.memberPermissions;
 
   return Boolean(
@@ -45,11 +100,14 @@ function hasSetupPermission(interaction) {
   );
 }
 
-async function getBotMember(guild) {
+async function getBotMember(guild: Guild): Promise<GuildMember> {
   return guild.members.me || guild.members.fetchMe();
 }
 
-function getMissingChannelPermissions(channel, botMember) {
+function getMissingChannelPermissions(
+  channel: SendableVerifyChannel,
+  botMember: GuildMember
+): string[] | null {
   const botPermissions = channel.permissionsFor(botMember);
 
   if (!botPermissions) {
@@ -73,7 +131,26 @@ function getMissingChannelPermissions(channel, botMember) {
   return missingPermissions;
 }
 
-function getRoleValidationError(guild, botMember, role) {
+function isSendableVerifyChannel(channel: unknown): channel is SendableVerifyChannel {
+  if (!channel || typeof channel !== 'object') {
+    return false;
+  }
+
+  const candidate = channel as Partial<SendableVerifyChannel>;
+
+  return Boolean(
+    typeof candidate.isTextBased === 'function' &&
+      candidate.isTextBased() &&
+      typeof candidate.permissionsFor === 'function' &&
+      typeof candidate.send === 'function'
+  );
+}
+
+function getRoleValidationError(
+  guild: Guild,
+  botMember: GuildMember,
+  role: Role
+): string | null {
   if (role.id === guild.id) {
     return '不能將 @everyone 作為驗證身分組。';
   }
@@ -100,7 +177,7 @@ function buildVerifyPanel({
   roleId,
   buttonLabel,
   image
-}) {
+}: VerifyPanelInput): VerifyPanelPayload {
   const embed = new EmbedBuilder()
     .setTitle(title)
     .setDescription(description)
@@ -116,7 +193,7 @@ function buildVerifyPanel({
     .setLabel(buttonLabel)
     .setStyle(ButtonStyle.Success);
 
-  const row = new ActionRowBuilder().addComponents(button);
+  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(button);
 
   return {
     components: [row],
@@ -134,18 +211,20 @@ function cleanupExpiredVerifyPanels() {
   }
 }
 
-async function getInteractionGuildMember(interaction) {
+async function getInteractionGuildMember(
+  interaction: ButtonInteraction
+): Promise<GuildMember> {
+  if (!interaction.guild) {
+    throw new Error('Missing guild for verify interaction.');
+  }
+
   try {
     return await interaction.guild.members.fetch({
       force: true,
       user: interaction.user.id
     });
   } catch (error) {
-    if (
-      interaction.member &&
-      interaction.member.roles &&
-      typeof interaction.member.roles.add === 'function'
-    ) {
+    if (interaction.member instanceof GuildMember) {
       return interaction.member;
     }
 
@@ -153,7 +232,7 @@ async function getInteractionGuildMember(interaction) {
   }
 }
 
-module.exports = {
+const setupVerifyCommand: BotCommand = {
   data: new SlashCommandBuilder()
     .setName('setup-verify')
     .setDescription('發送中文社群驗證面板')
@@ -205,13 +284,19 @@ module.exports = {
         return replyEphemeral(interaction, '此指令只能在伺服器中使用。');
       }
 
+      const guild = interaction.guild;
+
+      if (!guild) {
+        return replyEphemeral(interaction, '此指令只能在伺服器中使用。');
+      }
+
       if (!hasSetupPermission(interaction)) {
         return replyEphemeral(interaction, '你沒有權限使用此指令。');
       }
 
       const channel = interaction.options.getChannel('channel', true);
       const selectedRole = interaction.options.getRole('role', true);
-      const role = await interaction.guild.roles.fetch(selectedRole.id);
+      const role = await guild.roles.fetch(selectedRole.id);
       const title = interaction.options.getString('title') || DEFAULT_TITLE;
       const colorInput = interaction.options.getString('color') || DEFAULT_COLOR;
       const image = interaction.options.getString('image');
@@ -227,7 +312,7 @@ module.exports = {
         );
       }
 
-      if (!channel.isTextBased() || typeof channel.send !== 'function') {
+      if (!isSendableVerifyChannel(channel)) {
         return replyEphemeral(interaction, '請選擇可發送訊息的文字頻道。');
       }
 
@@ -235,8 +320,12 @@ module.exports = {
         return replyEphemeral(interaction, '找不到指定的驗證身分組。');
       }
 
-      const botMember = await getBotMember(interaction.guild);
-      const missingChannelPermissions = getMissingChannelPermissions(channel, botMember);
+      const botMember = await getBotMember(guild);
+      const targetChannel = channel;
+      const missingChannelPermissions = getMissingChannelPermissions(
+        targetChannel,
+        botMember
+      );
 
       if (!missingChannelPermissions) {
         return replyEphemeral(interaction, '無法檢查機器人在目標頻道的權限。');
@@ -245,14 +334,14 @@ module.exports = {
       if (missingChannelPermissions.length > 0) {
         return replyEphemeral(
           interaction,
-          `機器人在 ${channel} 缺少以下權限：${missingChannelPermissions.join(
+          `機器人在 ${targetChannel} 缺少以下權限：${missingChannelPermissions.join(
             '、'
           )}。`
         );
       }
 
       const roleValidationError = getRoleValidationError(
-        interaction.guild,
+        guild,
         botMember,
         role
       );
@@ -267,7 +356,7 @@ module.exports = {
 
       pendingVerifyPanels.set(modalId, {
         buttonLabel,
-        channelId: channel.id,
+        channelId: targetChannel.id,
         expiresAt: Date.now() + PENDING_VERIFY_PANEL_TTL_MS,
         guildId: interaction.guildId,
         image,
@@ -289,7 +378,9 @@ module.exports = {
         .setMaxLength(4000)
         .setRequired(true);
 
-      const row = new ActionRowBuilder().addComponents(descriptionInput);
+      const row = new ActionRowBuilder<TextInputBuilder>().addComponents(
+        descriptionInput
+      );
 
       modal.addComponents(row);
 
@@ -314,6 +405,13 @@ module.exports = {
 
     try {
       if (!interaction.inGuild()) {
+        await replyEphemeral(interaction, '此指令只能在伺服器中使用。');
+        return true;
+      }
+
+      const guild = interaction.guild;
+
+      if (!guild) {
         await replyEphemeral(interaction, '此指令只能在伺服器中使用。');
         return true;
       }
@@ -355,22 +453,26 @@ module.exports = {
         return true;
       }
 
-      const channel = await interaction.guild.channels.fetch(pendingPanel.channelId);
+      const channel = await guild.channels.fetch(pendingPanel.channelId);
 
-      if (!channel || !channel.isTextBased() || typeof channel.send !== 'function') {
+      if (!isSendableVerifyChannel(channel)) {
         await replyEphemeral(interaction, '找不到可發送訊息的目標文字頻道。');
         return true;
       }
 
-      const role = await interaction.guild.roles.fetch(pendingPanel.roleId);
+      const role = await guild.roles.fetch(pendingPanel.roleId);
 
       if (!role) {
         await replyEphemeral(interaction, '找不到指定的驗證身分組。');
         return true;
       }
 
-      const botMember = await getBotMember(interaction.guild);
-      const missingChannelPermissions = getMissingChannelPermissions(channel, botMember);
+      const botMember = await getBotMember(guild);
+      const targetChannel = channel;
+      const missingChannelPermissions = getMissingChannelPermissions(
+        targetChannel,
+        botMember
+      );
 
       if (!missingChannelPermissions) {
         await replyEphemeral(interaction, '無法檢查機器人在目標頻道的權限。');
@@ -380,7 +482,7 @@ module.exports = {
       if (missingChannelPermissions.length > 0) {
         await replyEphemeral(
           interaction,
-          `機器人在 ${channel} 缺少以下權限：${missingChannelPermissions.join(
+          `機器人在 ${targetChannel} 缺少以下權限：${missingChannelPermissions.join(
             '、'
           )}。`
         );
@@ -388,7 +490,7 @@ module.exports = {
       }
 
       const roleValidationError = getRoleValidationError(
-        interaction.guild,
+        guild,
         botMember,
         role
       );
@@ -407,8 +509,8 @@ module.exports = {
         title: pendingPanel.title
       });
 
-      await channel.send(panel);
-      await replyEphemeral(interaction, `驗證面板已發送到 ${channel}`);
+      await targetChannel.send(panel);
+      await replyEphemeral(interaction, `驗證面板已發送到 ${targetChannel}`);
 
       return true;
     } catch (error) {
@@ -437,8 +539,15 @@ module.exports = {
         return true;
       }
 
+      const guild = interaction.guild;
+
+      if (!guild) {
+        await replyEphemeral(interaction, '验证失败，请联络管理员。 Verification failed, please contact the administrator.');
+        return true;
+      }
+
       const roleId = interaction.customId.slice(VERIFY_CUSTOM_ID_PREFIX.length);
-      const role = await interaction.guild.roles.fetch(roleId);
+      const role = await guild.roles.fetch(roleId);
 
       if (!role) {
         console.error(`Verify role not found: ${roleId}`);
@@ -446,9 +555,9 @@ module.exports = {
         return true;
       }
 
-      const botMember = await getBotMember(interaction.guild);
+      const botMember = await getBotMember(guild);
       const roleValidationError = getRoleValidationError(
-        interaction.guild,
+        guild,
         botMember,
         role
       );
@@ -486,3 +595,5 @@ module.exports = {
     }
   }
 };
+
+export default setupVerifyCommand;

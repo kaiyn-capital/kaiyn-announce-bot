@@ -1,14 +1,16 @@
-require('dotenv').config();
+import 'dotenv/config';
 
-const {
+import {
   Client,
   Collection,
   Events,
   GatewayIntentBits,
+  type InteractionReplyOptions,
   MessageFlags
-} = require('discord.js');
-const announceCommand = require('./commands/announce');
-const setupVerifyCommand = require('./commands/setup-verify');
+} from 'discord.js';
+import announceCommand from './commands/announce';
+import setupVerifyCommand from './commands/setup-verify';
+import type { BotCommand } from './types/command';
 
 const requiredEnv = ['DISCORD_TOKEN'];
 
@@ -19,11 +21,18 @@ for (const key of requiredEnv) {
   }
 }
 
+const discordToken = process.env.DISCORD_TOKEN;
+
+if (!discordToken) {
+  console.error('Missing environment variable: DISCORD_TOKEN');
+  process.exit(1);
+}
+
 const client = new Client({
   intents: [GatewayIntentBits.Guilds]
 });
 
-client.commands = new Collection();
+client.commands = new Collection<string, BotCommand>();
 client.commands.set(announceCommand.data.name, announceCommand);
 client.commands.set(setupVerifyCommand.data.name, setupVerifyCommand);
 
@@ -34,15 +43,15 @@ client.once(Events.ClientReady, (readyClient) => {
 client.on(Events.InteractionCreate, async (interaction) => {
   try {
     if (interaction.isModalSubmit()) {
-      const isAnnounceModal = await announceCommand.handleModalSubmit(interaction);
+      const isAnnounceModal =
+        (await announceCommand.handleModalSubmit?.(interaction)) ?? false;
 
       if (isAnnounceModal) {
         return;
       }
 
-      const isSetupVerifyModal = await setupVerifyCommand.handleModalSubmit(
-        interaction
-      );
+      const isSetupVerifyModal =
+        (await setupVerifyCommand.handleModalSubmit?.(interaction)) ?? false;
 
       if (isSetupVerifyModal) {
         return;
@@ -52,7 +61,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     }
 
     if (interaction.isButton()) {
-      await setupVerifyCommand.handleVerifyButton(interaction);
+      await setupVerifyCommand.handleVerifyButton?.(interaction);
       return;
     }
 
@@ -66,11 +75,17 @@ client.on(Events.InteractionCreate, async (interaction) => {
   } catch (error) {
     const interactionName = interaction.isChatInputCommand()
       ? `/${interaction.commandName}`
-      : interaction.customId || interaction.type;
+      : 'customId' in interaction
+        ? interaction.customId
+        : interaction.type;
 
     console.error(`Error handling ${interactionName}:`, error);
 
-    const payload = {
+    if (!interaction.isRepliable()) {
+      return;
+    }
+
+    const payload: InteractionReplyOptions = {
       content: '執行指令時發生錯誤，請稍後再試。',
       flags: MessageFlags.Ephemeral
     };
@@ -87,7 +102,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
   }
 });
 
-client.login(process.env.DISCORD_TOKEN).catch((error) => {
+client.login(discordToken).catch((error) => {
   console.error('Failed to login:', error);
   process.exit(1);
 });

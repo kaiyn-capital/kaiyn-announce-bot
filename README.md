@@ -2,6 +2,11 @@
 
 最小可用的 Discord 彩色 Embed 公告與中文驗證機器人。
 
+## 執行環境
+
+- Node.js v24 LTS
+- npm
+
 ## 功能
 
 - Slash command：`/announce`
@@ -24,13 +29,16 @@ kaiyn-announce-bot/
 ├── .gitignore
 ├── README.md
 └── src/
-    ├── index.js
-    ├── deploy-commands.js
+    ├── index.ts
+    ├── deploy-commands.ts
     ├── commands/
-    │   ├── announce.js
-    │   └── setup-verify.js
+    │   ├── announce.ts
+    │   └── setup-verify.ts
+    ├── types/
+    │   ├── command.ts
+    │   └── discord.d.ts
     └── utils/
-        └── color.js
+        └── color.ts
 ```
 
 ## 建立 Discord App / Bot
@@ -83,6 +91,12 @@ https://discord.com/oauth2/authorize?client_id=YOUR_CLIENT_ID&permissions=241593
 
 ## 安裝
 
+請先確認使用 Node.js v24 LTS：
+
+```bash
+node -v
+```
+
 ```bash
 npm install
 ```
@@ -111,6 +125,12 @@ npm run deploy
 
 ## 啟動 Bot
 
+正式啟動前先編譯 TypeScript：
+
+```bash
+npm run build
+```
+
 ```bash
 npm start
 ```
@@ -119,6 +139,12 @@ npm start
 
 ```bash
 npm run dev
+```
+
+只檢查 TypeScript 型別、不輸出 `dist/`：
+
+```bash
+npm run typecheck
 ```
 
 ## `/announce` 使用範例

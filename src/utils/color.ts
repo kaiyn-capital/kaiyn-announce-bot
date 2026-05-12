@@ -1,6 +1,6 @@
-const DEFAULT_COLOR = '#2F80ED';
+export const DEFAULT_COLOR = '#2F80ED';
 
-function parseHexColor(input = DEFAULT_COLOR) {
+export function parseHexColor(input = DEFAULT_COLOR): number | null {
   const rawColor = String(input || DEFAULT_COLOR).trim();
   const normalizedColor = rawColor.startsWith('#') ? rawColor.slice(1) : rawColor;
 
@@ -10,8 +10,3 @@ function parseHexColor(input = DEFAULT_COLOR) {
 
   return parseInt(normalizedColor, 16);
 }
-
-module.exports = {
-  DEFAULT_COLOR,
-  parseHexColor
-};
