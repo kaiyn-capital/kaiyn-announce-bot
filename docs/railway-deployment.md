@@ -1,38 +1,28 @@
-# Railway Deployment Notes
+# Railway Deployment Guide
 
-## 決策
+本文件整理 Kaiyn Announce Bot 在 Railway 上的部署方式、環境變數、指令註冊與營運檢查項。專案以長時間常駐的 Node.js process 運行，部署平台需支援持續執行、日誌檢視與自動重啟。
 
-本專案 production 部署平台選擇 Railway。
+## 部署架構
 
-理由：
+Kaiyn Announce Bot 使用 Railway 作為 production runtime，並透過 GitHub repository 連動部署。
 
-- Discord bot 是長時間常駐 process，Railway 支援 persistent service。
-- 專案不需要資料庫、HTTP server、Docker 或複雜基礎設施。
-- Railway 可從 GitHub repository 建立 service，並集中管理 variables、logs、deployments 與 restart policy。
-- 專案已鎖定 Node.js v24 LTS：`>=24 <25`。
-
-## Railway Service 設定
-
-建立一個 Railway service，使用以下設定：
+主要設定：
 
 - Source：GitHub repository `kylekkkk61/kaiyn-announce-bot`
 - Environment：`production`
-- Node.js：使用專案 `package.json` 的 `engines.node`
+- Runtime：Node.js，版本依 `package.json` 的 `engines.node` 設定
 - Build command：`npm run build`
 - Start command：`npm start`
 - Deploy branch：`main`
 - GitHub autodeploy：enabled
 - Wait for CI：enabled
-- Railway plan：Hobby
 - Restart policy：`Always`
-- Staging environment：不建立
-- Healthcheck：不設定 HTTP healthcheck，因為 bot 沒有 web server
 
-Railway 通常會依專案自動偵測 build / start command，但 production 建議在 service settings 明確指定，避免平台偵測邏輯變動造成啟動方式不一致。
+Railway 通常會自動偵測 Node.js 專案的 build 與 start command。production 環境建議在 service settings 明確指定，確保部署流程與專案 scripts 保持一致。
 
-## Variables
+## 環境變數
 
-Railway service variables 需要設定：
+Railway service variables 需設定下列項目：
 
 ```env
 DISCORD_TOKEN=
@@ -40,81 +30,115 @@ CLIENT_ID=
 GUILD_ID=
 ```
 
-注意：
+變數用途：
 
-- 不要把 production token 寫進 git。
-- 不要在 log 中輸出 token。
-- Railway variables 會提供給 build 與 running deployment。
-- 如果使用 `.env.example` 匯入建議變數，仍需要手動填入真正的 secret value。
+- `DISCORD_TOKEN`：Discord Bot Token。
+- `CLIENT_ID`：Discord Application Client ID，用於註冊 slash commands。
+- `GUILD_ID`：目標 Discord server ID，用於 guild command registration。
 
-## Deploy 流程
+安全原則：
 
-首次部署建議順序：
+- production secrets 應存放於 Railway service variables。
+- token 不應提交至 git、README、issue、log 或任何公開位置。
+- `.env.example` 僅作為變數名稱範本，不包含實際 secret value。
+
+## 首次部署流程
 
 1. 確認 GitHub Actions CI 通過。
 2. 在 Railway 建立 project。
-3. 從 GitHub repo 建立 service。
-4. 設定 production variables。
+3. 從 GitHub repository 建立 service。
+4. 設定 production service variables。
 5. 設定 build command：`npm run build`。
 6. 設定 start command：`npm start`。
 7. 設定 deploy branch：`main`。
-8. 開啟 GitHub autodeploy。
-9. 開啟 Wait for CI。
-10. 設定 Railway plan：Hobby。
-11. 設定 restart policy：`Always`。
-12. Deploy service。
-13. 只在 slash command 定義有變更時，另外執行 `npm run deploy`。
+8. 啟用 GitHub autodeploy。
+9. 啟用 Wait for CI。
+10. 設定 restart policy：`Always`。
+11. Deploy service。
+12. 檢查 deployment logs，確認 Bot 成功登入 Discord。
 
-一般更新流程：
+成功啟動時，log 應出現類似訊息：
 
-1. Push code 到部署 branch。
-2. GitHub Actions CI 跑 typecheck / build / test。
-3. Railway 等 CI 成功後，根據 GitHub source 重新部署。
-4. 查看 Railway deployment logs。
+```txt
+Starting Kaiyn Announce Bot with Node ...
+Logged in as ...
+```
 
-如果沒有開啟 Wait for CI，Railway 可能會在 GitHub Actions 尚未完成前就開始部署。此專案已經有 CI，因此 production 建議開啟 Wait for CI。
+## 一般更新流程
 
-## Slash Command Deploy
+1. 將程式碼 push 到部署 branch。
+2. GitHub Actions 執行 install、typecheck、build 與 test。
+3. Railway 在 CI 成功後重新部署 service。
+4. 檢查 Railway deployment logs。
+5. 確認 Discord Bot 維持 online。
 
-`npm run deploy` 會註冊 Discord guild slash commands。
+啟用 Wait for CI 可避免 CI 尚未完成時提前部署，讓 production 更新流程與測試結果保持一致。
 
-這個動作不應該放進 Railway service start command，因為：
+## Slash Command 註冊
 
-- Bot 每次重啟不需要重複註冊 slash commands。
-- start command 應只負責啟動 long-running bot process。
-- slash command 有變更時才需要 deploy。
+`npm run deploy` 會將 slash command 定義註冊到指定 guild。
 
-決定：
+```bash
+npm run deploy
+```
 
-- 手動在本機執行 `npm run deploy`。
-- 只有新增、刪除、修改 slash command 定義時才執行。
+此指令適合在下列情況手動執行：
+
+- 新增 slash command。
+- 移除 slash command。
+- 修改 slash command 名稱、參數或描述。
+
+Bot 的 start command 應專注於啟動 long-running process：
+
+```bash
+npm start
+```
+
+將 command registration 與 runtime startup 分開，可以避免每次 service 重啟時重複更新 Discord command registry。
 
 ## Restart Policy
 
-Railway 預設 restart policy 是 `On Failure`，有 restart 次數限制。本專案 production 決定使用 `Always`。
+Discord bot 屬於長時間常駐服務，建議使用可自動恢復的 restart policy。
 
-設定：
+建議設定：
 
 - Preferred：`Always`
-- Fallback：若當下不能設定 `Always`，先用 `On Failure`
-- 不使用：`Never`
+- Acceptable fallback：`On Failure`
+- Avoid：`Never`
+
+當 process 因 runtime error、平台重啟或重新部署而中止時，restart policy 應能讓 service 自動恢復。
 
 ## Logs and Operations
 
-上線後需要定期確認：
+上線後建議定期檢查：
 
-- Service deployment 狀態。
-- Runtime logs 是否有 `Failed to login`、interaction error、permission error。
-- Railway redeploy 或停止 service 時，logs 應出現 `Received SIGTERM, shutting down.` 與 `Discord client destroyed.`。
-- Fatal runtime error 時，logs 應出現 `Unhandled promise rejection` 或 `Uncaught exception`，並由 Railway restart policy 接手重啟。
-- Railway 是否因 billing、usage limit 或 restart limit 導致 service 停止。
-- Discord bot 是否維持 online。
+- Deployment 是否成功完成。
+- Runtime logs 是否出現 Discord login、interaction 或 permission error。
+- Service 是否因 usage limit、billing 或 restart limit 停止。
+- Discord Bot 是否維持 online。
+- 重新部署或停止 service 時，是否觸發 graceful shutdown。
+
+預期 shutdown log：
+
+```txt
+Received SIGTERM, shutting down.
+Discord client destroyed.
+```
+
+預期 fatal error log：
+
+```txt
+Unhandled promise rejection
+Uncaught exception
+```
+
+若出現 fatal error，應搭配 Railway logs 與 application stack trace 判斷原因，並確認 restart policy 是否成功接手重啟。
 
 ## 官方文件
 
-- Railway Services：https://docs.railway.com/develop/services
-- Railway Variables：https://docs.railway.com/variables
-- Railway Build and Start Commands：https://docs.railway.com/reference/build-and-start-commands
-- Railway Start Command：https://docs.railway.com/deployments/start-command
-- Railway GitHub Autodeploys：https://docs.railway.com/deployments/github-autodeploys
-- Railway Restart Policy：https://docs.railway.com/guides/restart-policy
+- [Railway Services](https://docs.railway.com/develop/services)
+- [Railway Variables](https://docs.railway.com/variables)
+- [Railway Build and Start Commands](https://docs.railway.com/reference/build-and-start-commands)
+- [Railway Start Command](https://docs.railway.com/deployments/start-command)
+- [Railway GitHub Autodeploys](https://docs.railway.com/deployments/github-autodeploys)
+- [Railway Restart Policy](https://docs.railway.com/guides/restart-policy)

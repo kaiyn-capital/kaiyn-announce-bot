@@ -1,83 +1,141 @@
 # Kaiyn Announce Bot
 
-最小可用的 Discord 彩色 Embed 公告與中文驗證機器人。
+[![Node.js](https://img.shields.io/badge/Node.js-24-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Discord.js](https://img.shields.io/badge/Discord.js-14-5865F2?logo=discord&logoColor=white)](https://discord.js.org/)
+[![dotenv](https://img.shields.io/badge/dotenv-16-ECD53F?logo=dotenv&logoColor=black)](https://github.com/motdotla/dotenv)
+[![Node Test Runner](https://img.shields.io/badge/Test%20Runner-Node.js-339933?logo=node.js&logoColor=white)](https://nodejs.org/api/test.html)
 
-## 執行環境
+Kaiyn Announce Bot 是一個以 TypeScript 與 Discord.js 建置的 Discord 社群管理機器人，提供 Embed 公告發布與成員驗證流程。專案聚焦在社群營運中常見的公告、驗證與權限控管需求，透過 Slash Command、Modal 與 Button Interaction 建立一致且可維護的管理體驗。
 
-- Node.js v24 LTS
-- npm
+## 專案特色
 
-## 功能
+- 使用 Discord Slash Command 建立清楚的管理入口。
+- 支援透過 Modal 輸入多行公告內容，保留換行與段落格式。
+- 可發送自訂標題、顏色、footer、大圖、縮圖與時間戳的 Embed 公告。
+- 提供中文驗證面板，讓新成員透過按鈕完成身分組發放。
+- 在執行指令前檢查使用者權限、Bot 頻道權限與身分組層級。
+- 使用 ephemeral message 回覆錯誤與操作結果，避免管理訊息干擾公開頻道。
+- 將核心邏輯拆分為可測試函式，搭配 Node.js 內建 test runner 進行單元測試。
+- 支援 graceful shutdown 與 process-level error logging，提升長時間運行穩定性。
 
-- Slash command：`/announce`
-- Slash command：`/setup-verify`
-- 管理員可透過 Modal 多行輸入框發送彩色 Embed 公告
-- 管理員可發送中文驗證面板，讓新成員點擊按鈕取得 Verified 身分組
-- 支援標題、內容、顏色、footer、大圖、縮圖、時間戳
-- 不使用資料庫
-- 不需要 CAPTCHA、防小號、反 VPN、付款或會員系統
-- 不需要 Docker
-- Production 部署平台建議使用 Railway
 
-## 檔案結構
+## 功能總覽
+
+### `/announce`
+
+`/announce` 用於建立彩色 Embed 公告。管理員可指定目標頻道、標題、顏色與媒體欄位，公告正文則透過 Discord Modal 輸入，適合需要保留多行格式的正式公告。
+
+支援參數：
+
+- `channel`：公告要發送到的文字頻道。
+- `title`：Embed 標題。
+- `color`：Embed 顏色，支援 `#RRGGBB` 或 `RRGGBB`。
+- `footer`：底部文字。
+- `image`：Embed 大圖 URL。
+- `thumbnail`：Embed 縮圖 URL。
+- `timestamp`：是否加入時間戳。
+
+### `/setup-verify`
+
+`/setup-verify` 用於建立社群驗證面板。管理員可指定驗證頻道與驗證成功後要發放的身分組，Bot 會發送包含按鈕的 Embed 面板，成員點擊後即可完成驗證。
+
+支援參數：
+
+- `channel`：驗證面板要發送到的文字頻道。
+- `role`：驗證成功後要發放的身分組。
+- `title`：驗證面板標題。
+- `color`：Embed 顏色，支援 `#RRGGBB` 或 `RRGGBB`。
+- `image`：驗證面板大圖 URL。
+- `button_label`：驗證按鈕文字。
+
+## 權限設計
+
+專案在互動流程中加入必要的權限檢查，降低部署後因 Discord 權限設定錯誤造成的操作失敗。
+
+- `/announce` 需要使用者具備 `Manage Messages` 或 `Administrator` 權限。
+- `/setup-verify` 需要使用者具備 `Manage Guild` 或 `Administrator` 權限。
+- Bot 需要具備 `View Channels`、`Send Messages`、`Embed Links` 與 `Manage Roles`。
+- Bot 的最高身分組必須高於要發放的驗證身分組。
+- 驗證身分組不可為 `@everyone`，也不可為 Discord 或整合服務管理的身分組。
+
+## 專案結構
 
 ```txt
 kaiyn-announce-bot/
+├── docs/
+│   ├── production-readiness-checklist.md
+│   └── railway-deployment.md
+├── src/
+│   ├── commands/
+│   │   ├── announce.logic.ts
+│   │   ├── announce.logic.test.ts
+│   │   ├── announce.ts
+│   │   ├── setup-verify.logic.ts
+│   │   ├── setup-verify.logic.test.ts
+│   │   └── setup-verify.ts
+│   ├── types/
+│   │   ├── command.ts
+│   │   └── discord.d.ts
+│   ├── utils/
+│   │   ├── color.test.ts
+│   │   ├── color.ts
+│   │   ├── permissions.test.ts
+│   │   └── permissions.ts
+│   ├── deploy-commands.ts
+│   └── index.ts
+├── .env.example
 ├── package.json
 ├── package-lock.json
-├── .env.example
-├── .gitignore
 ├── README.md
-└── src/
-    ├── index.ts
-    ├── deploy-commands.ts
-    ├── commands/
-    │   ├── announce.ts
-    │   └── setup-verify.ts
-    ├── types/
-    │   ├── command.ts
-    │   └── discord.d.ts
-    └── utils/
-        └── color.ts
+└── tsconfig.json
 ```
 
-## 建立 Discord App / Bot
+## 執行環境
 
-1. 前往 Discord Developer Portal：
-   https://discord.com/developers/applications
-2. 點擊 `New Application` 建立應用程式。
-3. 進入左側 `Bot` 頁面，點擊 `Add Bot`。
-4. 在 `Bot` 頁面取得 Bot Token。
+請先確認本機使用 Node.js v24 LTS：
 
-請不要把 `DISCORD_TOKEN` commit 到 GitHub。
+```bash
+node -v
+```
 
-## 取得 CLIENT_ID
+安裝依賴：
 
-1. 進入 Discord Developer Portal 的應用程式。
-2. 打開 `OAuth2` 頁面。
-3. 複製 `Client ID`。
+```bash
+npm install
+```
 
-## 取得 GUILD_ID
+正式或 CI 環境建議使用乾淨安裝：
 
-1. Discord 開啟 Developer Mode：
-   `User Settings` → `Advanced` → `Developer Mode`
-2. 對你的伺服器點右鍵。
-3. 點擊 `Copy Server ID`。
+```bash
+npm ci
+```
 
-## 邀請 Bot
+## 環境變數
 
-需要的 scopes：
+複製環境變數範本：
 
-- `bot`
-- `applications.commands`
+```bash
+cp .env.example .env
+```
 
-需要的 permissions：
+填入 Discord Bot 需要的設定：
 
-- `View Channels`
-- `Send Messages`
-- `Embed Links`
-- `Manage Roles`
-- `Use Slash Commands`
+```env
+DISCORD_TOKEN=your_discord_bot_token
+CLIENT_ID=your_discord_application_client_id
+GUILD_ID=your_discord_guild_id
+```
+
+`DISCORD_TOKEN` 屬於敏感資訊，請放在本機 `.env` 或部署平台的 secrets / variables 中，不應提交到版本控制。
+
+## Discord Bot 設定
+
+1. 前往 [Discord Developer Portal](https://discord.com/developers/applications) 建立 Application。
+2. 在 `Bot` 頁面建立 Bot 並取得 Bot Token。
+3. 在 `OAuth2` 頁面取得 Client ID。
+4. 開啟 Discord Developer Mode，對目標伺服器使用 `Copy Server ID` 取得 Guild ID。
+5. 使用 OAuth2 URL 邀請 Bot，scopes 需包含 `bot` 與 `applications.commands`。
 
 Invite URL 範例：
 
@@ -85,215 +143,80 @@ Invite URL 範例：
 https://discord.com/oauth2/authorize?client_id=YOUR_CLIENT_ID&permissions=2415938560&scope=bot+applications.commands
 ```
 
-請把 `YOUR_CLIENT_ID` 換成你的 Client ID。
+## 指令註冊與啟動
 
-驗證功能需要 Bot 的最高身分組高於要發放的 Verified 身分組。請在 Discord 伺服器設定的 `Roles` 頁面，把 Bot 身分組拖到 Verified 身分組上方。
-
-## 安裝
-
-請先確認使用 Node.js v24 LTS：
-
-```bash
-node -v
-```
-
-```bash
-npm install
-```
-
-## 建立 .env
-
-```bash
-cp .env.example .env
-```
-
-填入：
-
-```env
-DISCORD_TOKEN=你的 Bot Token
-CLIENT_ID=你的 Client ID
-GUILD_ID=你的測試伺服器 ID
-```
-
-## 註冊 Slash Command
-
-Guild slash command 通常會很快生效：
+註冊 guild slash commands：
 
 ```bash
 npm run deploy
 ```
 
-## 啟動 Bot
-
-正式啟動前先編譯 TypeScript：
+編譯 TypeScript：
 
 ```bash
 npm run build
 ```
 
+啟動 Bot：
+
 ```bash
 npm start
 ```
 
-開發時可使用：
+開發模式：
 
 ```bash
 npm run dev
 ```
 
-只檢查 TypeScript 型別、不輸出 `dist/`：
+## 品質檢查
+
+型別檢查：
 
 ```bash
 npm run typecheck
 ```
 
-執行單元測試前先編譯：
+執行測試：
 
 ```bash
 npm run build
 npm test
 ```
 
-Production Railway 部署筆記：
+## 使用範例
+
+建立公告：
 
 ```txt
-docs/railway-deployment.md
+/announce channel:#announcements title:"Kaiyn Capital｜重要公告" color:"#87CEEB" timestamp:true
 ```
 
-## `/announce` 使用範例
+送出指令後，Bot 會開啟 Modal，管理員可在 `公告內容` 欄位輸入完整公告文字。
+
+建立驗證面板：
 
 ```txt
-/announce channel:#announcements title:"Kaiyn Capital｜重要公告" color:"#87CEEB"
+/setup-verify channel:#verify role:@Verified title:"Kaiyn Capital｜社群驗證" color:"#87CEEB" button_label:"完成驗證"
 ```
 
-送出 `/announce` 後，Bot 會跳出 Modal 多行輸入框。請把公告內容貼到 `公告內容` 欄位中，可以保留換行與空行。
+送出指令後，Bot 會開啟 Modal，管理員可在 `驗證面板內容` 欄位輸入面板說明文字。成員點擊驗證按鈕後，Bot 會檢查目前身分組狀態並發放指定角色。
 
-公告內容範例：
+## 部署
 
-```txt
-Kaiyn Capital 慨影资本社区与 Bitget/Binance 交易所已建立深度合作关系，以群组邀请码注册任一交易所即可加入策略群，并根据不同交易额/入金金额享有多款社区自研 TradingView 指标使用权。
-
-请使用以下连结注册交易所，并入金 200USDT 以上即可进群。
-
-Bitget：https://kaiyn.org/bitget 邀请码：5nmb
-
-Binance：https://kaiyn.org/binance 邀请码：148898758
-```
-
-`/announce` 的 `color` 選填，預設為 `#87CEEB`。色碼也可以省略 `#`，例如 `87CEEB`。
-
-`/announce` 的 `timestamp` 選填，預設為 `false`。
-
-## `/setup-verify` 使用範例
-
-```txt
-/setup-verify channel:#verify role:@Verified
-```
-
-完整自訂範例：
-
-```txt
-/setup-verify channel:#verify role:@Verified title:"Kaiyn Capital｜社群驗證" color:"#87CEEB" image:"https://example.com/verify.png" button_label:"✅ 完成驗證"
-```
-
-送出 `/setup-verify` 後，Bot 會跳出 Modal 多行輸入框。請把驗證面板內容貼到 `驗證面板內容` 欄位中，可以保留換行與空行。
-
-參數：
-
-- `channel`：要發送驗證面板的文字頻道，必填。
-- `role`：驗證成功後要給予的身分組，必填。
-- `title`：驗證面板標題，選填，預設 `Kaiyn Capital｜社群驗證`。
-- `color`：Embed 顏色，選填，預設 `#87CEEB`。支援 `#87CEEB` 或 `87CEEB`。
-- `image`：驗證面板大圖 URL，選填。
-- `button_label`：按鈕文字，選填，預設 `✅ 完成驗證`。
-
-權限規則：
-
-- 只有 `Administrator` 或 `Manage Guild` 權限的成員可以使用 `/setup-verify`。
-- 沒有權限時會收到 ephemeral message：`你沒有權限使用此指令。`
-- Bot 需要 `Manage Roles`、`Send Messages`、`Embed Links`。
-- Bot 在目標頻道也需要 `View Channels`。
-- Bot 的最高身分組必須高於要發放的 Verified 身分組。
-
-驗證流程：
-
-1. 管理員執行 `/setup-verify`。
-2. Bot 跳出 Modal 多行輸入框。
-3. 管理員輸入驗證面板內容並送出。
-4. Bot 在指定頻道發送中文 Embed 驗證面板。
-5. 新成員點擊綠色驗證按鈕。
-6. 如果已經有該身分組，Bot 回覆 ephemeral：`你已經完成驗證。`
-7. 如果尚未驗證，Bot 發放身分組並回覆 ephemeral：`✅ 驗證成功，你現在可以查看社群頻道。`
-8. 如果發放失敗，Bot 回覆 ephemeral：`驗證失敗，請聯絡管理員。`
-
-## 測試方式
-
-1. 邀請 Bot 到測試伺服器。
-2. 確認 Bot 具有：
-   - View Channels
-   - Send Messages
-   - Embed Links
-   - Manage Roles
-   - Use Slash Commands
-3. 確認 Bot 的最高身分組高於 Verified 身分組。
-4. 執行：
+專案可部署到支援長時間常駐 Node.js process 的平台。部署環境需要設定下列流程：
 
 ```bash
-npm run deploy
+npm ci
+npm run build
 npm start
 ```
 
-5. 在 Discord 輸入 `/announce`，確認公告功能仍可使用。
-6. 在 Discord 輸入 `/setup-verify channel:#verify role:@Verified`。
-7. 在 Modal 多行輸入框填入驗證面板內容並送出。
-8. 確認指定頻道出現中文 Embed 驗證面板與綠色按鈕。
-9. 用沒有 Verified 身分組的帳號點擊按鈕，應收到：
+Railway 部署筆記請參考：
 
-```txt
-✅ 驗證成功，你現在可以查看社群頻道。
-```
+- [docs/railway-deployment.md](docs/railway-deployment.md)
+- [docs/production-readiness-checklist.md](docs/production-readiness-checklist.md)
 
-10. 再次點擊按鈕，應收到：
+## License
 
-```txt
-你已經完成驗證。
-```
-
-11. 若色碼錯誤，例如 `blue`，應收到：
-
-```txt
-色碼格式錯誤，請使用 #RRGGBB，例如 #87CEEB。
-```
-
-12. 若使用者沒有 `/announce` 權限，應收到：
-
-```txt
-你沒有權限使用此指令。
-```
-
-13. 若使用者沒有 `/setup-verify` 權限，應收到：
-
-```txt
-你沒有權限使用此指令。
-```
-
-14. 若 Bot 缺少頻道權限、`Manage Roles`，或 Bot 身分組排序低於 Verified 身分組，應收到清楚的錯誤原因。
-
-## 更新 Slash Command
-
-如果你修改了 slash command 的參數，請重新執行：
-
-```bash
-npm run deploy
-```
-
-## 部署提醒
-
-- Node.js 版本需為 v24 LTS
-- 不要把 `.env` commit 到 GitHub
-- `.gitignore` 已忽略 `.env`、`node_modules/` 與 `dist/`
-- Railway 上請用 service variables 設定：
-  - `DISCORD_TOKEN`
-  - `CLIENT_ID`
-  - `GUILD_ID`
-- Railway 部署細節請看 `docs/railway-deployment.md`
+此專案採用 [MIT License](LICENSE) 授權。

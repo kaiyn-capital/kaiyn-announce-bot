@@ -1,82 +1,163 @@
 # Production Readiness Checklist
 
-## 目前已完成
+本文件整理 Kaiyn Announce Bot 上線前與營運期間需要確認的項目，涵蓋 runtime、環境變數、建置流程、權限設定、穩定性與部署策略。
 
-- TypeScript migration 已完成。
-- Node.js baseline 已鎖定為 v24 LTS：`>=24 <25`。
-- `npm run typecheck` 可檢查型別。
-- `npm run build` 可產生 `dist/`。
-- `npm test` 已使用 Node.js 內建 test runner 跑基本單元測試。
-- GitHub Actions CI 已建立，push / pull request 時會跑 install、typecheck、build、test。
-- Discord 手動驗收已由使用者確認完成，後續不重複列為必要項目。
-- Production 部署平台已決定使用 Railway。
-- Runtime graceful shutdown 已完成：
-  - `SIGINT`
-  - `SIGTERM`
-- Process-level error logging 已完成：
-  - `unhandledRejection`
-  - `uncaughtException`
-- 啟動時會輸出 production-safe runtime summary，不輸出 token。
+## Runtime and Build
 
-## 正式上線前必做
+- Node.js 版本需符合 `package.json` 中的 `engines.node`：`>=24 <25`。
+- 使用 `npm ci` 進行乾淨安裝，確保依賴版本與 `package-lock.json` 一致。
+- 使用 `npm run build` 編譯 TypeScript 並產生 `dist/`。
+- 啟動前確認 `dist/index.js` 已存在。
+- `dist/` 應由部署環境產生，不提交至版本控制。
 
-- 確認 production runtime 使用 Node.js v24 LTS，不使用 v25 或其他 Current 版本。
-- 確認 production 環境變數完整：
-  - `DISCORD_TOKEN`
-  - `CLIENT_ID`
-  - `GUILD_ID`
-- 確認 production secrets 不會寫入 git、log、README 或任何公開位置。
-- 在正式環境使用乾淨安裝流程：
+建議 production build 流程：
 
 ```bash
 npm ci
 npm run build
 ```
 
-- 啟動 bot 前確認 `dist/index.js` 已存在。
-- Slash command 有變更時才執行：
+建議 production start command：
+
+```bash
+npm start
+```
+
+## Quality Gates
+
+上線前應完成下列檢查：
+
+- `npm run typecheck`：確認 TypeScript 型別正確。
+- `npm run build`：確認專案可正常編譯。
+- `npm test`：執行單元測試。
+- GitHub Actions CI：確認 push / pull request 時會執行 install、typecheck、build 與 test。
+
+建議本機驗證流程：
+
+```bash
+npm run typecheck
+npm run build
+npm test
+```
+
+## Environment Variables
+
+production 環境需設定：
+
+```env
+DISCORD_TOKEN=
+CLIENT_ID=
+GUILD_ID=
+```
+
+檢查項目：
+
+- `DISCORD_TOKEN` 對應正確的 Discord Bot。
+- `CLIENT_ID` 對應同一個 Discord Application。
+- `GUILD_ID` 對應目標 Discord server。
+- 測試環境與 production 環境使用不同設定時，需避免混用。
+- secrets 僅存放於 `.env` 或部署平台 variables，不寫入 git、README 或 logs。
+
+## Discord Permissions
+
+Bot 邀請時需包含下列 scopes：
+
+- `bot`
+- `applications.commands`
+
+Bot 在目標頻道需具備：
+
+- `View Channels`
+- `Send Messages`
+- `Embed Links`
+
+驗證功能額外需要：
+
+- `Manage Roles`
+- Bot 的最高身分組高於要發放的驗證身分組。
+- 驗證身分組不是 `@everyone`。
+- 驗證身分組不是 Discord 或整合服務管理的 managed role。
+
+管理指令權限：
+
+- `/announce`：使用者需具備 `Manage Messages` 或 `Administrator`。
+- `/setup-verify`：使用者需具備 `Manage Guild` 或 `Administrator`。
+
+## Slash Command Deployment
+
+Slash command definition 有變更時，需重新註冊 guild commands：
 
 ```bash
 npm run deploy
 ```
 
-- 平時重啟 bot 不需要重複 deploy slash commands。
-- 確認 `.env` 或平台 secrets 與目標 Discord App / Guild 對應，不混用測試與正式 Discord App。
-- 確認 `dist/` 不提交到 git，由部署環境 build 產生。
-- Railway service 設定 build command：`npm run build`。
-- Railway service 設定 start command：`npm start`。
-- Railway service variables 設定 `DISCORD_TOKEN`、`CLIENT_ID`、`GUILD_ID`。
+適合重新註冊的情境：
 
-## 運行穩定性
+- 新增 command。
+- 移除 command。
+- 修改 command 名稱、參數、必填狀態或描述。
 
-- 部署平台需要支援長時間常駐 process。
-- process crash 後需要自動重啟。
-- 機器重開或平台重新部署後需要自動啟動 bot。
-- 需要能查看 stdout / stderr logs。
-- 需要保留最近錯誤 log，方便追查 Discord API、權限或環境變數問題。
-- 需要確認平台不會因為 idle 而休眠，否則 Discord bot 會離線。
+Runtime service 的 start command 應維持為：
 
-## 建議補強
+```bash
+npm start
+```
 
-- README 可在決定部署平台後補上 production deployment 區塊。
-- 若未來 bot 功能變多，再考慮 structured logger 或 log aggregation。
+command registration 與 service startup 分離，有助於降低部署過程中的副作用。
 
-## Railway 部署策略已決定
+## Railway Configuration
 
-- GitHub autodeploy branch：`main`。
-- Railway GitHub autodeploy：enabled。
-- Railway Wait for CI：enabled。
-- Railway plan：Hobby。
-- Railway restart policy：`Always`；若當下不能設定，先用 `On Failure`。
-- Secrets 管理方式：Railway service variables。
-- Staging：不建立，先只使用 production。
-- CD：不建立額外 CD pipeline，先使用 Railway GitHub autodeploy。
-- Healthcheck：不設定 HTTP healthcheck，因為 bot 沒有 web server。
-- Slash command deploy：本機手動執行 `npm run deploy`。
+Railway service 建議設定：
 
-## 不建議現在做
+- Environment：`production`
+- Build command：`npm run build`
+- Start command：`npm start`
+- Deploy branch：`main`
+- GitHub autodeploy：enabled
+- Wait for CI：enabled
+- Restart policy：`Always`
+- Service variables：`DISCORD_TOKEN`、`CLIENT_ID`、`GUILD_ID`
 
-- 不建議現在導入 Bun runtime。
-- 不建議現在加入 CD，先完成 Railway 手動部署流程。
-- 不建議把 `dist/` commit 進 git。
-- 不建議讓 CI 執行 `npm start` 或 `npm run deploy`。
+部署細節請參考：
+
+- [railway-deployment.md](railway-deployment.md)
+
+## Operational Readiness
+
+上線後需確認部署平台支援：
+
+- 長時間常駐 Node.js process。
+- process crash 後自動重啟。
+- 平台重啟或重新部署後自動啟動 service。
+- stdout / stderr logs 檢視。
+- 最近錯誤 log 保留。
+- 不因 idle 狀態導致 Bot 離線。
+
+Runtime logs 應能協助追查：
+
+- Discord login failure。
+- slash command interaction error。
+- channel permission error。
+- role hierarchy error。
+- missing environment variable。
+- graceful shutdown。
+
+## Release Checklist
+
+上線或重大更新前確認：
+
+- CI 全部通過。
+- production variables 已設定且對應正確 Discord App / Guild。
+- `npm run deploy` 已在 command definition 變更後執行。
+- Railway 使用正確 branch 部署。
+- deployment logs 顯示 Bot 成功登入。
+- Discord 伺服器中可看到 Bot online。
+- `/announce` 可成功送出測試公告。
+- `/setup-verify` 可成功建立驗證面板。
+- 測試帳號可透過驗證按鈕取得指定身分組。
+
+## Maintenance Notes
+
+- 新增或修改 Discord interaction 時，建議同步補上可測試的 pure logic。
+- 權限相關邏輯應保留明確錯誤訊息，方便部署後排查 Discord 設定問題。
+- 當功能規模擴大或 log 查詢需求增加時，可評估導入 structured logging。
