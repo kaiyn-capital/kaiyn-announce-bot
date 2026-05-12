@@ -17,7 +17,7 @@
 - 不使用資料庫
 - 不需要 CAPTCHA、防小號、反 VPN、付款或會員系統
 - 不需要 Docker
-- 可部署到 VPS / Railway / Render
+- Production 部署平台建議使用 Railway
 
 ## 檔案結構
 
@@ -154,6 +154,12 @@ npm run build
 npm test
 ```
 
+Production Railway 部署筆記：
+
+```txt
+docs/railway-deployment.md
+```
+
 ## `/announce` 使用範例
 
 ```txt
@@ -281,10 +287,11 @@ npm run deploy
 
 ## 部署提醒
 
-- Node.js 版本需為 20+
+- Node.js 版本需為 v24 LTS
 - 不要把 `.env` commit 到 GitHub
-- `.gitignore` 已忽略 `.env` 與 `node_modules/`
-- Railway / Render / VPS 上請用環境變數設定：
+- `.gitignore` 已忽略 `.env`、`node_modules/` 與 `dist/`
+- Railway 上請用 service variables 設定：
   - `DISCORD_TOKEN`
   - `CLIENT_ID`
   - `GUILD_ID`
+- Railway 部署細節請看 `docs/railway-deployment.md`

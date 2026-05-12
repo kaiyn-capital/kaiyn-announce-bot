@@ -13,12 +13,15 @@ import setupVerifyCommand from './commands/setup-verify';
 import type { BotCommand } from './types/command';
 
 const requiredEnv = ['DISCORD_TOKEN'];
+const presentRequiredEnv = [];
 
 for (const key of requiredEnv) {
   if (!process.env[key]) {
     console.error(`Missing environment variable: ${key}`);
     process.exit(1);
   }
+
+  presentRequiredEnv.push(key);
 }
 
 const discordToken = process.env.DISCORD_TOKEN;
@@ -30,6 +33,48 @@ if (!discordToken) {
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds]
+});
+
+let isShuttingDown = false;
+
+function shutdown(reason: string, exitCode: 0 | 1, error?: unknown): void {
+  if (isShuttingDown) {
+    console.warn(`Shutdown already in progress; ignoring ${reason}.`);
+    return;
+  }
+
+  isShuttingDown = true;
+
+  if (error) {
+    console.error(`${reason}:`, error);
+  } else {
+    console.log(`${reason}.`);
+  }
+
+  try {
+    client.destroy();
+    console.log('Discord client destroyed.');
+  } catch (destroyError) {
+    console.error('Failed to destroy Discord client during shutdown:', destroyError);
+  }
+
+  process.exit(exitCode);
+}
+
+process.on('SIGINT', () => {
+  shutdown('Received SIGINT, shutting down', 0);
+});
+
+process.on('SIGTERM', () => {
+  shutdown('Received SIGTERM, shutting down', 0);
+});
+
+process.on('unhandledRejection', (reason) => {
+  shutdown('Unhandled promise rejection', 1, reason);
+});
+
+process.on('uncaughtException', (error) => {
+  shutdown('Uncaught exception', 1, error);
 });
 
 client.commands = new Collection<string, BotCommand>();
@@ -102,7 +147,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
   }
 });
 
+console.log(
+  `Starting Kaiyn Announce Bot with Node ${process.version}; required env present: ${presentRequiredEnv.join(
+    ', '
+  )}.`
+);
+
 client.login(discordToken).catch((error) => {
-  console.error('Failed to login:', error);
-  process.exit(1);
+  shutdown('Failed to login', 1, error);
 });
