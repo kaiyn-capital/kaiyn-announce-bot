@@ -20,11 +20,11 @@
 	},
 	"dependencies": {
 		"discord.js": "^14.26.4",
-		"dotenv": "^17.4.2"
+		"dotenv": "^16.6.1"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.4.15",
-		"@types/node": "^25.7.0",
+		"@types/node": "^24.12.4",
 		"tsx": "^4.21.0",
 		"typescript": "^6.0.3"
 	}
