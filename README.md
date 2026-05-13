@@ -1,12 +1,32 @@
 # Kaiyn Announce Bot
 
-[![Node.js](https://img.shields.io/badge/Node.js-24-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![CI](https://github.com/kylekkkk61/kaiyn-announce-bot/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/kylekkkk61/kaiyn-announce-bot/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+[![Node.js](https://img.shields.io/badge/Node.js-24-339933?logo=node.js&logoColor=white)](./package.json)
+[![npm](https://img.shields.io/badge/npm-package%20lock-CB3837?logo=npm&logoColor=white)](./package.json)
+
 [![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Discord.js](https://img.shields.io/badge/Discord.js-14-5865F2?logo=discord&logoColor=white)](https://discord.js.org/)
 [![dotenv](https://img.shields.io/badge/dotenv-16-ECD53F?logo=dotenv&logoColor=black)](https://github.com/motdotla/dotenv)
 [![Node Test Runner](https://img.shields.io/badge/Test%20Runner-Node.js-339933?logo=node.js&logoColor=white)](https://nodejs.org/api/test.html)
+[![Biome](https://img.shields.io/badge/code%20style-biome-60A5FA?logo=biome&logoColor=white)](https://biomejs.dev/)
+[![Dependabot](https://img.shields.io/badge/Dependabot-enabled-025E8C?logo=dependabot&logoColor=white)](./.github/dependabot.yml)
 
 Kaiyn Announce Bot 是一個以 TypeScript 與 Discord.js 建置的 Discord 社群管理機器人，提供 Embed 公告發布與成員驗證流程。專案聚焦在社群營運中常見的公告、驗證與權限控管需求，透過 Slash Command、Modal 與 Button Interaction 建立一致且可維護的管理體驗。
+
+## Tech Stack
+
+| Area | Choice |
+| --- | --- |
+| Runtime | Node.js 24 (`engines.node`: `>=24 <25`) |
+| Package manager | npm + `package-lock.json` |
+| Language | TypeScript 6 (`strict`) |
+| Discord SDK | Discord.js 14 |
+| Configuration | dotenv 16 (`dotenv/config`) |
+| Testing | Node.js built-in test runner |
+| Tooling | Biome (lint + format), tsx watch mode |
+| CI | GitHub Actions (lint / format / typecheck / build / test) |
+| Automation | Dependabot (weekly npm updates, major ignores for Node types and dotenv) |
 
 ## 專案特色
 
