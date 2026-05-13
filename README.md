@@ -171,6 +171,24 @@ npm run dev
 
 ## 品質檢查
 
+程式碼 lint：
+
+```bash
+npm run lint
+```
+
+格式檢查：
+
+```bash
+npm run format:check
+```
+
+套用格式化：
+
+```bash
+npm run format
+```
+
 型別檢查：
 
 ```bash

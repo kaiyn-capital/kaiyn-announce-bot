@@ -1,27 +1,27 @@
 export interface TextChannelPermissionCapabilities {
-  canViewChannel: boolean;
-  canSendMessages: boolean;
-  canEmbedLinks: boolean;
+	canViewChannel: boolean;
+	canSendMessages: boolean;
+	canEmbedLinks: boolean;
 }
 
 export function getMissingTextChannelPermissions({
-  canViewChannel,
-  canSendMessages,
-  canEmbedLinks
+	canViewChannel,
+	canSendMessages,
+	canEmbedLinks,
 }: TextChannelPermissionCapabilities): string[] {
-  const missingPermissions: string[] = [];
+	const missingPermissions: string[] = [];
 
-  if (!canViewChannel) {
-    missingPermissions.push('View Channels');
-  }
+	if (!canViewChannel) {
+		missingPermissions.push("View Channels");
+	}
 
-  if (!canSendMessages) {
-    missingPermissions.push('Send Messages');
-  }
+	if (!canSendMessages) {
+		missingPermissions.push("Send Messages");
+	}
 
-  if (!canEmbedLinks) {
-    missingPermissions.push('Embed Links');
-  }
+	if (!canEmbedLinks) {
+		missingPermissions.push("Embed Links");
+	}
 
-  return missingPermissions;
+	return missingPermissions;
 }
