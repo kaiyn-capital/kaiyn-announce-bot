@@ -49,7 +49,11 @@ async function replyEphemeral(
 		flags: MessageFlags.Ephemeral,
 	};
 
-	if (interaction.replied || interaction.deferred) {
+	if (interaction.deferred && !interaction.replied) {
+		return interaction.editReply({ content });
+	}
+
+	if (interaction.replied) {
 		return interaction.followUp(payload);
 	}
 
@@ -295,6 +299,8 @@ const announceCommand: BotCommand = {
 		}
 
 		try {
+			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
 			if (!interaction.inGuild()) {
 				await replyEphemeral(interaction, "此指令只能在伺服器中使用。");
 				return true;
