@@ -1,32 +1,40 @@
+<div align="center">
+
 # Kaiyn Announce Bot
 
-[![CI](https://github.com/kylekkkk61/kaiyn-announce-bot/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/kylekkkk61/kaiyn-announce-bot/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
-[![Node.js](https://img.shields.io/badge/Node.js-24-339933?logo=node.js&logoColor=white)](./package.json)
-[![npm](https://img.shields.io/badge/npm-package%20lock-CB3837?logo=npm&logoColor=white)](./package.json)
+**Minimal & Elegant Discord Embed Announcement Bot**
 
-[![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Discord.js](https://img.shields.io/badge/Discord.js-14-5865F2?logo=discord&logoColor=white)](https://discord.js.org/)
-[![dotenv](https://img.shields.io/badge/dotenv-16-ECD53F?logo=dotenv&logoColor=black)](https://github.com/motdotla/dotenv)
-[![Node Test Runner](https://img.shields.io/badge/Test%20Runner-Node.js-339933?logo=node.js&logoColor=white)](https://nodejs.org/api/test.html)
-[![Biome](https://img.shields.io/badge/code%20style-biome-60A5FA?logo=biome&logoColor=white)](https://biomejs.dev/)
-[![Dependabot](https://img.shields.io/badge/Dependabot-enabled-025E8C?logo=dependabot&logoColor=white)](./.github/dependabot.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/kaiyn-capital/kaiyn-announce-bot/ci.yml?branch=main&style=for-the-badge)](https://github.com/kaiyn-capital/kaiyn-announce-bot/actions/workflows/ci.yml)
+[![Dependabot](https://img.shields.io/badge/Dependabot-enabled-025E8C?style=for-the-badge&logo=dependabot&logoColor=white)](./.github/dependabot.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](./LICENSE)
+[![Node.js](https://img.shields.io/badge/Node.js-24-339933?style=for-the-badge&logo=node.js&logoColor=white)](./package.json)
+[![npm](https://img.shields.io/badge/npm-package%20lock-CB3837?style=for-the-badge&logo=npm&logoColor=white)](./package.json)
 
+[![TypeScript](https://img.shields.io/badge/TypeScript-6.0.3-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Discord.js](https://img.shields.io/badge/Discord.js-14.26.4-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.js.org/)
+[![Biome](https://img.shields.io/badge/Biome-2.5.0-60A5FA?style=for-the-badge&logo=biome&logoColor=white)](https://biomejs.dev/)
+[![Node Test Runner](https://img.shields.io/badge/Test%20Runner-Node.js-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/api/test.html)
+
+<p align="center">
 Kaiyn Announce Bot 是一個以 TypeScript 與 Discord.js 建置的 Discord 社群管理機器人，提供 Embed 公告發布與成員驗證流程。專案聚焦在社群營運中常見的公告、驗證與權限控管需求，透過 Slash Command、Modal 與 Button Interaction 建立一致且可維護的管理體驗。
+</p>
+
+</div>
+
+---
 
 ## Tech Stack
 
 | Area | Choice |
-| --- | --- |
-| Runtime | Node.js 24 (`engines.node`: `>=24 <25`) |
-| Package manager | npm + `package-lock.json` |
-| Language | TypeScript 6 (`strict`) |
-| Discord SDK | Discord.js 14 |
-| Configuration | dotenv 16 (`dotenv/config`) |
-| Testing | Node.js built-in test runner |
-| Tooling | Biome (lint + format), tsx watch mode |
-| CI | GitHub Actions (lint / format / typecheck / build / test) |
-| Automation | Dependabot (weekly npm updates, major ignores for Node types and dotenv) |
+| :--- | :--- |
+| **Runtime** | `Node.js 24` (`engines.node`: `>=24 <25`) |
+| **Language** | `TypeScript 6.0.3` (`strict`) |
+| **Discord SDK** | `Discord.js 14.26.4` |
+| **Configuration** | `dotenv 17.4.2` |
+| **Package Manager**| `npm` + `package-lock.json` |
+| **Lint / Format** | `Biome 2.5.0` |
+| **Testing** | Node.js built-in test runner |
+| **CI & Automation**| GitHub Actions (Parallel CI) + Dependabot |
 
 ## 專案特色
 
@@ -111,35 +119,26 @@ kaiyn-announce-bot/
 └── tsconfig.json
 ```
 
-## 執行環境
+## Getting Started
 
-請先確認本機使用 Node.js v24 LTS：
+### Prerequisites
+
+- **Node.js 24+** — 確保本機環境已安裝正確的 Node.js 版本：
+  ```bash
+  node -v
+  ```
+
+### Install and Run
 
 ```bash
-node -v
-```
-
-安裝依賴：
-
-```bash
+# 安裝依賴 (正式或 CI 環境建議使用 npm ci)
 npm install
-```
 
-正式或 CI 環境建議使用乾淨安裝：
-
-```bash
-npm ci
-```
-
-## 環境變數
-
-複製環境變數範本：
-
-```bash
+# 複製環境變數範本並填寫設定
 cp .env.example .env
 ```
 
-填入 Discord Bot 需要的設定：
+請在 `.env` 填入 Discord Bot 需要的設定：
 
 ```env
 DISCORD_TOKEN=your_discord_bot_token
@@ -147,7 +146,32 @@ CLIENT_ID=your_discord_application_client_id
 GUILD_ID=your_discord_guild_id
 ```
 
-`DISCORD_TOKEN` 屬於敏感資訊，請放在本機 `.env` 或部署平台的 secrets / variables 中，不應提交到版本控制。
+> [!WARNING]
+> `DISCORD_TOKEN` 屬於敏感資訊，請放在本機 `.env` 或部署平台的 secrets 中，**絕對不可**提交到版本控制。
+
+```bash
+# 註冊 Discord guild slash commands
+npm run deploy
+
+# 編譯 TypeScript 並啟動 Bot
+npm run build
+npm start
+
+# 開發模式 (熱重載)
+npm run dev
+```
+
+## Validation & Code Quality
+
+在提交 PR 或 Commit 之前，請執行以下腳本確保程式碼品質與測試通過：
+
+```bash
+npm run lint         # 程式碼 lint
+npm run format:check # 格式檢查 (可使用 npm run format 自動修復)
+npm run typecheck    # 型別檢查
+npm run build        # 確保可成功編譯
+npm test             # 執行單元測試
+```
 
 ## Discord Bot 設定
 
@@ -161,65 +185,6 @@ Invite URL 範例：
 
 ```txt
 https://discord.com/oauth2/authorize?client_id=YOUR_CLIENT_ID&permissions=2415938560&scope=bot+applications.commands
-```
-
-## 指令註冊與啟動
-
-註冊 guild slash commands：
-
-```bash
-npm run deploy
-```
-
-編譯 TypeScript：
-
-```bash
-npm run build
-```
-
-啟動 Bot：
-
-```bash
-npm start
-```
-
-開發模式：
-
-```bash
-npm run dev
-```
-
-## 品質檢查
-
-程式碼 lint：
-
-```bash
-npm run lint
-```
-
-格式檢查：
-
-```bash
-npm run format:check
-```
-
-套用格式化：
-
-```bash
-npm run format
-```
-
-型別檢查：
-
-```bash
-npm run typecheck
-```
-
-執行測試：
-
-```bash
-npm run build
-npm test
 ```
 
 ## 使用範例
