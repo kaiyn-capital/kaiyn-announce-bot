@@ -1,27 +1,48 @@
 name: Dependabot auto-merge
-on: pull_request
+
+on: pull_request_target
 
 permissions:
-  contents: write
   pull-requests: write
+  contents: write
 
 jobs:
-  dependabot:
+  auto-merge:
+    name: Auto-merge Dependabot PRs
     runs-on: ubuntu-latest
     if: github.event.pull_request.user.login == 'dependabot[bot]'
+    timeout-minutes: 5
+
     steps:
-      - name: Dependabot metadata
+      - name: Fetch Dependabot metadata
         id: metadata
         uses: dependabot/fetch-metadata@v2
-        with:
-          github-token: "${{ secrets.GITHUB_TOKEN }}"
-      - name: Approve a PR
-        run: gh pr review --approve "$PR_URL"
-        env:
-          PR_URL: ${{github.event.pull_request.html_url}}
-          GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
-      - name: Enable auto-merge for Dependabot PRs
+
+      # 1. Enable auto-merge for patch updates (e.g. 1.0.0 -> 1.0.1)
+      - name: Enable auto-merge for patch updates
+        if: steps.metadata.outputs.update-type == 'version-update:semver-patch'
         run: gh pr merge --auto --squash "$PR_URL"
         env:
-          PR_URL: ${{github.event.pull_request.html_url}}
-          GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 2. Enable auto-merge for minor development updates (e.g. devDependencies)
+      - name: Enable auto-merge for minor development updates
+        if: |
+          steps.metadata.outputs.update-type == 'version-update:semver-minor' &&
+          steps.metadata.outputs.dependency-type == 'direct:development'
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 3. Request human review for high-risk updates (major or production minor)
+      - name: Request review for non-low-risk updates
+        if: |
+          steps.metadata.outputs.update-type == 'version-update:semver-major' ||
+          (steps.metadata.outputs.update-type == 'version-update:semver-minor' &&
+           steps.metadata.outputs.dependency-type != 'direct:development')
+        run: gh pr edit "$PR_URL" --add-reviewer kylekkkk61
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
