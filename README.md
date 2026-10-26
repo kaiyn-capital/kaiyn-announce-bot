@@ -25,16 +25,16 @@ Kaiyn Announce Bot 是一個以 TypeScript 與 Discord.js 建置的 Discord 社�
 
 ## Tech Stack
 
-| Area | Choice |
-| :--- | :--- |
-| **Runtime** | `Node.js 24` (`engines.node`: `>=24 <25`) |
-| **Language** | `TypeScript 6.0.3` (`strict`) |
-| **Discord SDK** | `Discord.js 14.26.4` |
-| **Configuration** | `dotenv 17.4.2` |
-| **Package Manager**| `npm` + `package-lock.json` |
-| **Lint / Format** | `Biome 2.5.0` |
-| **Testing** | Node.js built-in test runner |
-| **CI & Automation**| GitHub Actions (Parallel CI) + Dependabot |
+| Area                | Choice                                    |
+| :------------------ | :---------------------------------------- |
+| **Runtime**         | `Node.js 24` (`engines.node`: `>=24 <25`) |
+| **Language**        | `TypeScript 6.0.3` (`strict`)             |
+| **Discord SDK**     | `Discord.js 14.26.4`                      |
+| **Configuration**   | `dotenv 17.4.2`                           |
+| **Package Manager** | `npm` + `package-lock.json`               |
+| **Lint / Format**   | `Biome 2.5.0`                             |
+| **Testing**         | Node.js built-in test runner              |
+| **CI & Automation** | GitHub Actions (Parallel CI) + Dependabot |
 
 ## 專案特色
 
@@ -55,7 +55,6 @@ Kaiyn Announce Bot 是一個以 TypeScript 與 Discord.js 建置的 Discord 社�
 `/announce` 用於建立彩色 Embed 公告。管理員可指定目標頻道、標題、顏色與媒體欄位，公告正文則透過 Discord Modal 輸入，適合需要保留多行格式的正式公告。
 
 支援參數：
-
 - `channel`：公告要發送到的文字頻道。
 - `title`：Embed 標題。
 - `color`：Embed 顏色，支援 `#RRGGBB` 或 `RRGGBB`。
@@ -69,7 +68,6 @@ Kaiyn Announce Bot 是一個以 TypeScript 與 Discord.js 建置的 Discord 社�
 `/setup-verify` 用於建立社群驗證面板。管理員可指定驗證頻道與驗證成功後要發放的身分組，Bot 會發送包含按鈕的 Embed 面板，成員點擊後即可完成驗證。
 
 支援參數：
-
 - `channel`：驗證面板要發送到的文字頻道。
 - `role`：驗證成功後要發放的身分組。
 - `title`：驗證面板標題。
@@ -80,7 +78,6 @@ Kaiyn Announce Bot 是一個以 TypeScript 與 Discord.js 建置的 Discord 社�
 ## 權限設計
 
 專案在互動流程中加入必要的權限檢查，降低部署後因 Discord 權限設定錯誤造成的操作失敗。
-
 - `/announce` 需要使用者具備 `Manage Messages` 或 `Administrator` 權限。
 - `/setup-verify` 需要使用者具備 `Manage Guild` 或 `Administrator` 權限。
 - Bot 需要具備 `View Channels`、`Send Messages`、`Embed Links` 與 `Manage Roles`。
@@ -124,6 +121,7 @@ kaiyn-announce-bot/
 ### Prerequisites
 
 - **Node.js 24+** — 確保本機環境已安裝正確的 Node.js 版本：
+
   ```bash
   node -v
   ```
@@ -216,7 +214,6 @@ npm start
 ```
 
 Railway 部署筆記請參考：
-
 - [docs/railway-deployment.md](docs/railway-deployment.md)
 - [docs/production-readiness-checklist.md](docs/production-readiness-checklist.md)
 
