@@ -7,7 +7,6 @@
 Kaiyn Announce Bot 使用 Railway 作為 production runtime，並透過 GitHub repository 連動部署。
 
 主要設定：
-
 - Source：GitHub repository `kylekkkk61/kaiyn-announce-bot`
 - Environment：`production`
 - Runtime：Node.js，版本依 `package.json` 的 `engines.node` 設定
@@ -31,13 +30,11 @@ GUILD_ID=
 ```
 
 變數用途：
-
 - `DISCORD_TOKEN`：Discord Bot Token。
 - `CLIENT_ID`：Discord Application Client ID，用於註冊 slash commands。
 - `GUILD_ID`：目標 Discord server ID，用於 guild command registration。
 
 安全原則：
-
 - production secrets 應存放於 Railway service variables。
 - token 不應提交至 git、README、issue、log 或任何公開位置。
 - `.env.example` 僅作為變數名稱範本，不包含實際 secret value。
@@ -83,7 +80,6 @@ npm run deploy
 ```
 
 此指令適合在下列情況手動執行：
-
 - 新增 slash command。
 - 移除 slash command。
 - 修改 slash command 名稱、參數或描述。
@@ -101,7 +97,6 @@ npm start
 Discord bot 屬於長時間常駐服務，建議使用可自動恢復的 restart policy。
 
 建議設定：
-
 - Preferred：`Always`
 - Acceptable fallback：`On Failure`
 - Avoid：`Never`
@@ -111,7 +106,6 @@ Discord bot 屬於長時間常駐服務，建議使用可自動恢復的 restart
 ## Logs and Operations
 
 上線後建議定期檢查：
-
 - Deployment 是否成功完成。
 - Runtime logs 是否出現 Discord login、interaction 或 permission error。
 - Service 是否因 usage limit、billing 或 restart limit 停止。

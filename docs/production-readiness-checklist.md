@@ -26,7 +26,6 @@ npm start
 ## Quality Gates
 
 上線前應完成下列檢查：
-
 - `npm run typecheck`：確認 TypeScript 型別正確。
 - `npm run build`：確認專案可正常編譯。
 - `npm test`：執行單元測試。
@@ -51,7 +50,6 @@ GUILD_ID=
 ```
 
 檢查項目：
-
 - `DISCORD_TOKEN` 對應正確的 Discord Bot。
 - `CLIENT_ID` 對應同一個 Discord Application。
 - `GUILD_ID` 對應目標 Discord server。
@@ -61,25 +59,21 @@ GUILD_ID=
 ## Discord Permissions
 
 Bot 邀請時需包含下列 scopes：
-
 - `bot`
 - `applications.commands`
 
 Bot 在目標頻道需具備：
-
 - `View Channels`
 - `Send Messages`
 - `Embed Links`
 
 驗證功能額外需要：
-
 - `Manage Roles`
 - Bot 的最高身分組高於要發放的驗證身分組。
 - 驗證身分組不是 `@everyone`。
 - 驗證身分組不是 Discord 或整合服務管理的 managed role。
 
 管理指令權限：
-
 - `/announce`：使用者需具備 `Manage Messages` 或 `Administrator`。
 - `/setup-verify`：使用者需具備 `Manage Guild` 或 `Administrator`。
 
@@ -92,7 +86,6 @@ npm run deploy
 ```
 
 適合重新註冊的情境：
-
 - 新增 command。
 - 移除 command。
 - 修改 command 名稱、參數、必填狀態或描述。
@@ -108,7 +101,6 @@ command registration 與 service startup 分離，有助於降低部署過程中
 ## Railway Configuration
 
 Railway service 建議設定：
-
 - Environment：`production`
 - Build command：`npm run build`
 - Start command：`npm start`
@@ -119,13 +111,11 @@ Railway service 建議設定：
 - Service variables：`DISCORD_TOKEN`、`CLIENT_ID`、`GUILD_ID`
 
 部署細節請參考：
-
 - [railway-deployment.md](railway-deployment.md)
 
 ## Operational Readiness
 
 上線後需確認部署平台支援：
-
 - 長時間常駐 Node.js process。
 - process crash 後自動重啟。
 - 平台重啟或重新部署後自動啟動 service。
@@ -134,7 +124,6 @@ Railway service 建議設定：
 - 不因 idle 狀態導致 Bot 離線。
 
 Runtime logs 應能協助追查：
-
 - Discord login failure。
 - slash command interaction error。
 - channel permission error。
@@ -145,7 +134,6 @@ Runtime logs 應能協助追查：
 ## Release Checklist
 
 上線或重大更新前確認：
-
 - CI 全部通過。
 - production variables 已設定且對應正確 Discord App / Guild。
 - `npm run deploy` 已在 command definition 變更後執行。
